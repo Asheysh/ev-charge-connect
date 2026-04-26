@@ -56,8 +56,6 @@ src/
   types/
 package.json
 vite.config.ts
-tsconfig.json
-eslint.config.js
 ```
 
 ## App Routes
