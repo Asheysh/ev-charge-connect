@@ -65,12 +65,13 @@ export async function createUpiTransaction(userId: string, amount: number): Prom
 
 export function subscribeToStationQueue(stationId: string, onChange: () => void) {
   if (!isSupabaseConfigured || !supabase) return () => undefined;
+  const client = supabase;
   const channel = supabase
     .channel(`queue:${stationId}`)
     .on("postgres_changes", { event: "*", schema: "public", table: "queue", filter: `station_id=eq.${stationId}` }, onChange)
     .subscribe();
   return () => {
-    void supabase.removeChannel(channel);
+    void client.removeChannel(channel);
   };
 }
 
