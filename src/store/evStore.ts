@@ -1,10 +1,14 @@
 import { create } from "zustand";
-import type { QueueEntry, Station, StationFilters, Transaction, Verification } from "@/types/ev";
+import type { QueueEntry, Station, StationFilters, Transaction, UserProfile, Verification } from "@/types/ev";
 import { demoUser, stations as seedStations } from "@/services/seedData";
 import { createUpiTransaction, fetchQueue, fetchStations, joinStationQueue, submitVerification } from "@/services/evApi";
+import { getCurrentAuth, signInWithEmail, signOutUser, signUpWithEmail } from "@/services/authApi";
 
 interface EvState {
-  user: typeof demoUser;
+  user: UserProfile;
+  authReady: boolean;
+  authError: string;
+  isAuthenticated: boolean;
   stations: Station[];
   selectedStationId: string;
   filters: StationFilters;
@@ -12,12 +16,14 @@ interface EvState {
   queues: Record<string, QueueEntry[]>;
   verifications: Verification[];
   transactions: Transaction[];
-  activeTab: "map" | "queue" | "pay" | "rewards" | "admin";
-  loadStations: () => Promise<void>;
+  loadAuth: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (input: { name: string; email: string; password: string; phone?: string; vehicleModel?: string }) => Promise<void>;
+  logout: () => Promise<void>;
   setSelectedStation: (stationId: string) => void;
   setFilters: (filters: Partial<StationFilters>) => void;
   setBatteryPercent: (value: number) => void;
-  setActiveTab: (tab: EvState["activeTab"]) => void;
+  loadStations: () => Promise<void>;
   refreshQueue: (stationId: string) => Promise<void>;
   joinQueue: (stationId: string) => Promise<void>;
   checkIn: (stationId: string) => void;
@@ -29,12 +35,17 @@ interface EvState {
 const defaultFilters: StationFilters = {
   chargerType: "all",
   availability: "all",
-  maxDistance: 30,
+  connector: "all",
+  city: "all",
+  maxDistance: 40,
   maxPrice: 25,
 };
 
 export const useEvStore = create<EvState>((set, get) => ({
   user: demoUser,
+  authReady: false,
+  authError: "",
+  isAuthenticated: false,
   stations: seedStations,
   selectedStationId: seedStations[0].id,
   filters: defaultFilters,
@@ -42,7 +53,26 @@ export const useEvStore = create<EvState>((set, get) => ({
   queues: {},
   verifications: [],
   transactions: [],
-  activeTab: "map",
+  loadAuth: async () => {
+    try {
+      const auth = await getCurrentAuth();
+      set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authReady: true, authError: "" });
+    } catch (error) {
+      set({ authReady: true, authError: error instanceof Error ? error.message : "Could not load auth" });
+    }
+  },
+  login: async (email, password) => {
+    const auth = await signInWithEmail(email, password);
+    set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authError: "" });
+  },
+  signup: async (input) => {
+    const auth = await signUpWithEmail(input);
+    set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authError: "" });
+  },
+  logout: async () => {
+    await signOutUser();
+    set({ user: demoUser, isAuthenticated: false });
+  },
   loadStations: async () => {
     const loadedStations = await fetchStations();
     set({ stations: loadedStations, selectedStationId: loadedStations[0]?.id ?? get().selectedStationId });
@@ -50,7 +80,6 @@ export const useEvStore = create<EvState>((set, get) => ({
   setSelectedStation: (stationId) => set({ selectedStationId: stationId }),
   setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters } })),
   setBatteryPercent: (batteryPercent) => set({ batteryPercent }),
-  setActiveTab: (activeTab) => set({ activeTab }),
   refreshQueue: async (stationId) => {
     const queue = await fetchQueue(stationId);
     set((state) => ({ queues: { ...state.queues, [stationId]: queue } }));
