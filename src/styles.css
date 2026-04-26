@@ -152,5 +152,76 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    background-image:
+      radial-gradient(circle at 18% 0%, var(--surface-glow), transparent 36rem),
+      linear-gradient(135deg, color-mix(in oklab, var(--background) 88%, var(--primary) 12%), var(--background));
+  }
+
+  button,
+  a,
+  input,
+  select {
+    outline-color: var(--color-ring);
+  }
+}
+
+@layer utilities {
+  .bg-gradient-soft {
+    background-image: linear-gradient(135deg, color-mix(in oklab, var(--primary) 13%, var(--card)), color-mix(in oklab, var(--accent) 18%, var(--card)));
+  }
+
+  .ev-marker {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--primary) 86%, var(--accent));
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--primary) 18%, transparent), var(--shadow-glow);
+    border: 2px solid var(--primary-foreground);
+  }
+
+  .ev-marker span {
+    width: 10px;
+    height: 16px;
+    border-radius: 3px;
+    background: var(--primary-foreground);
+    position: relative;
+  }
+
+  .ev-marker span::after {
+    content: "";
+    position: absolute;
+    right: -3px;
+    top: 4px;
+    width: 3px;
+    height: 6px;
+    border-radius: 0 2px 2px 0;
+    background: var(--primary-foreground);
+  }
+
+  .leaflet-container {
+    background: var(--map-water);
+    font-family: var(--font-sans);
+  }
+
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip {
+    background: var(--card);
+    color: var(--card-foreground);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .ev-marker {
+      animation: marker-pulse 2.4s ease-in-out infinite;
+    }
+  }
+
+  @keyframes marker-pulse {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-2px) scale(1.04); }
   }
 }
