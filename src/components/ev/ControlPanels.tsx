@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation } from "react-router-dom";
 import { Award, BarChart3, BatteryCharging, Gauge, IndianRupee, LogOut, Map, QrCode, Search, Settings2, ShieldCheck, UserRound, Users, WalletCards, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,12 @@ import { isSupabaseConfigured } from "@/services/supabaseClient";
 
 export function TopBar() {
   const { user, isAuthenticated, logout } = useEvStore();
-  const pathname = useLocation({ select: (location) => location.pathname });
+  const { pathname } = useLocation();
   const tabs = [
     ["/", "Map", Map],
     ["/stations", "Stations", Zap],
     ["/booking", "Queue", Users],
-    ["/payments", "Pay", WalletCards],
+    ["/payment", "Pay", WalletCards],
     ["/rewards", "Rewards", Award],
     ["/admin", "Admin", BarChart3],
     ["/login", "Login", UserRound],
