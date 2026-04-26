@@ -1,4 +1,4 @@
-import { HashRouter, Link, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPanel, AuthPanel, FilterPanel, PageFrame, PaymentPanel, RecommendationRail, RewardsPanel, StationsDirectory } from "@/components/ev/ControlPanels";
 import { EvMap } from "@/components/ev/EvMap";
 import { StationPanel } from "@/components/ev/StationPanel";
@@ -53,7 +53,7 @@ function NotFoundPage() {
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/stations" element={<StationsPage />} />
@@ -65,6 +65,6 @@ export default function App() {
         <Route path="/login" element={<PageFrame><AuthPanel /></PageFrame>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
