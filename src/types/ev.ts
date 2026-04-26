@@ -10,6 +10,9 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  vehicleModel?: string;
+  preferredConnector?: string;
   coins: number;
   vehicleRangeKm: number;
   created_at: string;
@@ -22,7 +25,9 @@ export interface Station {
   lng: number;
   address: string;
   city: string;
+  operator?: string;
   charger_type: ChargerType;
+  connector_types: string[];
   total_slots: number;
   available_slots: number;
   price_per_kwh: number;
@@ -32,6 +37,8 @@ export interface Station {
   distance_km: number;
   amenities: string[];
   wait_minutes: number;
+  peak_hours?: string;
+  power_kw?: number;
   image_url?: string;
 }
 
@@ -41,6 +48,7 @@ export interface Charger {
   status: ChargerStatus;
   type: ChargerType;
   connector: string;
+  power_kw?: number;
 }
 
 export interface QueueEntry {
@@ -87,6 +95,8 @@ export interface Transaction {
 export interface StationFilters {
   chargerType: "all" | ChargerType;
   availability: "all" | "available" | "busy";
+  connector: "all" | string;
+  city: "all" | string;
   maxDistance: number;
   maxPrice: number;
 }

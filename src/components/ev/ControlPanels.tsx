@@ -1,25 +1,31 @@
-import { Award, BarChart3, BatteryCharging, Gauge, IndianRupee, QrCode, Search, Settings2, ShieldCheck, Users, WalletCards, Zap } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
+import { Award, BarChart3, BatteryCharging, Gauge, IndianRupee, LogOut, Map, QrCode, Search, Settings2, ShieldCheck, UserRound, Users, WalletCards, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
+import { isSupabaseConfigured } from "@/services/supabaseClient";
 
 export function TopBar() {
-  const { user, activeTab, setActiveTab } = useEvStore();
+  const { user, isAuthenticated, logout } = useEvStore();
+  const pathname = useLocation({ select: (location) => location.pathname });
   const tabs = [
-    ["map", "Map", Zap],
-    ["queue", "Queue", Users],
-    ["pay", "Pay", WalletCards],
-    ["rewards", "Rewards", Award],
-    ["admin", "Admin", BarChart3],
+    ["/", "Map", Map],
+    ["/stations", "Stations", Zap],
+    ["/booking", "Queue", Users],
+    ["/payments", "Pay", WalletCards],
+    ["/rewards", "Rewards", Award],
+    ["/admin", "Admin", BarChart3],
+    ["/login", "Login", UserRound],
   ] as const;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/88 backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1560px] flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-glow">
             <BatteryCharging className="size-6" />
           </div>
@@ -27,35 +33,63 @@ export function TopBar() {
             <h1 className="text-xl font-black tracking-tight">Smart EV Charging Assistant</h1>
             <p className="text-xs text-muted-foreground">India-ready station discovery, queues, UPI and rewards</p>
           </div>
-        </div>
+        </Link>
         <nav className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-card p-1 shadow-card">
-          {tabs.map(([id, label, Icon]) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                activeTab === id ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              }`}
-            >
-              <Icon className="size-4" /> {label}
-            </button>
-          ))}
+          {tabs.map(([to, label, Icon]) => {
+            const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                  active ? "bg-primary text-primary-foreground shadow-glow" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <Icon className="size-4" /> {label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-card">
           <div className="text-right">
             <p className="text-sm font-bold">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.coins} reward coins</p>
+            <p className="text-xs text-muted-foreground">{isAuthenticated ? "Signed in" : "Demo mode"} · {user.coins} coins</p>
           </div>
-          <div className="flex size-10 items-center justify-center rounded-full bg-accent font-black text-accent-foreground">AS</div>
+          <div className="flex size-10 items-center justify-center rounded-full bg-accent font-black text-accent-foreground">
+            {user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+          {isAuthenticated ? <Button size="icon" variant="ghost" onClick={() => void logout()} aria-label="Sign out"><LogOut /></Button> : null}
         </div>
       </div>
     </header>
   );
 }
 
+export function PageFrame({ children }: { children: React.ReactNode }) {
+  const { loadStations, loadAuth, refreshQueue, selectedStationId } = useEvStore();
+
+  useEffect(() => {
+    void loadAuth();
+    void loadStations();
+  }, [loadAuth, loadStations]);
+
+  useEffect(() => {
+    void refreshQueue(selectedStationId);
+  }, [refreshQueue, selectedStationId]);
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <TopBar />
+      <div className="mx-auto grid max-w-[1560px] gap-5 px-4 py-5 lg:px-6">{children}</div>
+    </main>
+  );
+}
+
 export function FilterPanel() {
-  const { filters, setFilters, batteryPercent, setBatteryPercent } = useEvStore();
+  const { filters, setFilters, batteryPercent, setBatteryPercent, stations } = useEvStore();
   const filteredStations = useFilteredStations();
+  const cities = useMemo(() => Array.from(new Set(stations.map((station) => station.city))).sort(), [stations]);
+  const connectors = useMemo(() => Array.from(new Set(stations.flatMap((station) => station.connector_types))).sort(), [stations]);
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
@@ -66,14 +100,17 @@ export function FilterPanel() {
         </div>
         <Settings2 className="size-5 text-muted-foreground" />
       </div>
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <label className="space-y-2">
+          <span className="text-sm font-semibold">City</span>
+          <select value={filters.city} onChange={(event) => setFilters({ city: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
+            <option value="all">All cities</option>
+            {cities.map((city) => <option key={city} value={city}>{city}</option>)}
+          </select>
+        </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold">Charger type</span>
-          <select
-            value={filters.chargerType}
-            onChange={(event) => setFilters({ chargerType: event.target.value as typeof filters.chargerType })}
-            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring"
-          >
+          <select value={filters.chargerType} onChange={(event) => setFilters({ chargerType: event.target.value as typeof filters.chargerType })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
             <option value="all">All chargers</option>
             <option value="AC">AC</option>
             <option value="DC">DC</option>
@@ -81,12 +118,15 @@ export function FilterPanel() {
           </select>
         </label>
         <label className="space-y-2">
+          <span className="text-sm font-semibold">Connector</span>
+          <select value={filters.connector} onChange={(event) => setFilters({ connector: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
+            <option value="all">All connectors</option>
+            {connectors.map((connector) => <option key={connector} value={connector}>{connector}</option>)}
+          </select>
+        </label>
+        <label className="space-y-2">
           <span className="text-sm font-semibold">Availability</span>
-          <select
-            value={filters.availability}
-            onChange={(event) => setFilters({ availability: event.target.value as typeof filters.availability })}
-            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring"
-          >
+          <select value={filters.availability} onChange={(event) => setFilters({ availability: event.target.value as typeof filters.availability })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
             <option value="all">All statuses</option>
             <option value="available">Available now</option>
             <option value="busy">Queue only</option>
@@ -94,7 +134,7 @@ export function FilterPanel() {
         </label>
         <label className="space-y-3">
           <span className="flex justify-between text-sm font-semibold"><span>Distance</span><span>{filters.maxDistance} km</span></span>
-          <Slider value={[filters.maxDistance]} min={5} max={40} step={1} onValueChange={([value]) => setFilters({ maxDistance: value })} />
+          <Slider value={[filters.maxDistance]} min={5} max={45} step={1} onValueChange={([value]) => setFilters({ maxDistance: value })} />
         </label>
         <label className="space-y-3">
           <span className="flex justify-between text-sm font-semibold"><span>Battery</span><span>{batteryPercent}%</span></span>
@@ -123,9 +163,43 @@ export function RecommendationRail() {
           </div>
           <h3 className="mt-4 text-lg font-black">{station.name}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{station.distance_km} km · {station.available_slots} slots · {station.wait_minutes} min wait</p>
+          <p className="mt-2 text-xs text-muted-foreground">{station.connector_types.join(" / ")} · {station.power_kw} kW</p>
         </button>
       ))}
     </div>
+  );
+}
+
+export function StationsDirectory() {
+  const stations = useFilteredStations();
+  const setSelectedStation = useEvStore((state) => state.setSelectedStation);
+  return (
+    <section className="grid gap-4 lg:grid-cols-3">
+      {stations.map((station) => (
+        <article key={station.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{station.operator}</p>
+              <h2 className="mt-2 text-xl font-black">{station.name}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{station.address}</p>
+            </div>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold">{station.status}</span>
+          </div>
+          <div className="mt-4 grid grid-cols-4 gap-2 text-sm">
+            <Metric label="Slots" value={`${station.available_slots}/${station.total_slots}`} icon={<Zap />} />
+            <Metric label="Wait" value={`${station.wait_minutes}m`} icon={<Users />} />
+            <Metric label="Power" value={`${station.power_kw}kW`} icon={<Gauge />} />
+            <Metric label="Price" value={`₹${station.price_per_kwh}`} icon={<IndianRupee />} />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {station.connector_types.map((connector) => <span key={connector} className="rounded-full bg-secondary px-3 py-1 text-xs">{connector}</span>)}
+          </div>
+          <Button className="mt-5 w-full" asChild variant="hero" onClick={() => setSelectedStation(station.id)}>
+            <Link to="/booking">Book slot</Link>
+          </Button>
+        </article>
+      ))}
+    </section>
   );
 }
 
@@ -196,15 +270,15 @@ export function AdminPanel() {
           <Metric label="Stations" value={stations.length.toString()} icon={<Zap />} />
           <Metric label="Active slots" value={activeSessions.toString()} icon={<Gauge />} />
           <Metric label="Avg reliability" value={`${Math.round(stations.reduce((s, x) => s + x.reliability_score, 0) / stations.length)}%`} icon={<ShieldCheck />} />
-          <Metric label="Revenue today" value="₹18.4k" icon={<IndianRupee />} />
+          <Metric label="Revenue today" value="₹28.7k" icon={<IndianRupee />} />
         </div>
       </div>
       <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
         <div className="flex items-center gap-2"><Search className="size-5 text-primary" /><Input placeholder="Search stations, charger IDs, operators" /></div>
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           {stations.map((station) => (
-            <div key={station.id} className="grid grid-cols-4 gap-3 border-b border-border p-3 text-sm last:border-0">
-              <span className="font-semibold">{station.name}</span><span>{station.charger_type}</span><span>{station.available_slots}/{station.total_slots} free</span><span>₹{station.price_per_kwh}/kWh</span>
+            <div key={station.id} className="grid gap-3 border-b border-border p-3 text-sm last:border-0 md:grid-cols-5">
+              <span className="font-semibold">{station.name}</span><span>{station.city}</span><span>{station.charger_type}</span><span>{station.available_slots}/{station.total_slots} free</span><span>₹{station.price_per_kwh}/kWh</span>
             </div>
           ))}
         </div>
@@ -213,5 +287,64 @@ export function AdminPanel() {
   );
 }
 
+export function AuthPanel() {
+  const { login, signup, authError, isAuthenticated, user, logout } = useEvStore();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", vehicleModel: "" });
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      if (mode === "login") await login(form.email, form.password);
+      else await signup(form);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (isAuthenticated) {
+    return (
+      <section className="mx-auto w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-card">
+        <UserRound className="size-8 text-primary" />
+        <h2 className="mt-4 text-2xl font-black">Signed in as {user.name}</h2>
+        <p className="mt-2 text-muted-foreground">{user.email} · {user.vehicleModel ?? "EV profile ready"}</p>
+        <Button className="mt-6" variant="outline" onClick={() => void logout()}>Sign out</Button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mx-auto w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Supabase Auth</p>
+          <h2 className="text-2xl font-black">{mode === "login" ? "Login" : "Create driver profile"}</h2>
+        </div>
+        <Button variant="secondary" onClick={() => setMode(mode === "login" ? "signup" : "login")}>{mode === "login" ? "Sign up" : "Login"}</Button>
+      </div>
+      {!isSupabaseConfigured ? <p className="mt-4 rounded-xl bg-secondary p-3 text-sm text-muted-foreground">Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable live external Supabase Auth. This preview is in demo mode.</p> : null}
+      <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+        {mode === "signup" ? <Input required placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /> : null}
+        <Input required type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+        <Input required type="password" minLength={6} placeholder="Password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
+        {mode === "signup" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input placeholder="Phone" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+            <Input placeholder="Vehicle model" value={form.vehicleModel} onChange={(event) => setForm({ ...form, vehicleModel: event.target.value })} />
+          </div>
+        ) : null}
+        {(error || authError) ? <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error || authError}</p> : null}
+        <Button type="submit" variant="hero" disabled={loading}>{loading ? "Please wait" : mode === "login" ? "Login" : "Create account"}</Button>
+      </form>
+    </section>
+  );
+}
+
 function EmptyLine({ text }: { text: string }) { return <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">{text}</div>; }
-function Metric({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) { return <div className="rounded-xl bg-secondary p-4"><div className="text-primary [&_svg]:size-5">{icon}</div><p className="mt-3 text-2xl font-black">{value}</p><p className="text-sm text-muted-foreground">{label}</p></div>; }
+function Metric({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) { return <div className="rounded-xl bg-secondary p-3"><div className="text-primary [&_svg]:size-5">{icon}</div><p className="mt-2 text-lg font-black">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>; }
