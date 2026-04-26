@@ -3,6 +3,8 @@ import { AdminPanel, AuthPanel, FilterPanel, PageFrame, PaymentPanel, Recommenda
 import { EvMap } from "@/components/ev/EvMap";
 import { StationPanel } from "@/components/ev/StationPanel";
 
+const routerBaseName = import.meta.env.BASE_URL === "./" ? "/" : import.meta.env.BASE_URL.replace(/\/$/, "");
+
 function HomePage() {
   return (
     <PageFrame>
@@ -53,7 +55,7 @@ function NotFoundPage() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBaseName}>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/stations" element={<StationsPage />} />
