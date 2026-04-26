@@ -1,14 +1,26 @@
 # Smart EV Charging Assistant Platform
 
-A full React + TypeScript web app for EV charging station discovery, slot booking, realtime queue management, QR-style check-in, Supabase Auth, driver profiles, simulated UPI payments, rewards, and station-admin operations.
+A portable, client-side React + Vite web app for EV charging station discovery, slot booking, queue management, QR-style check-in, external Supabase Auth, driver profiles, simulated UPI payments, rewards, and admin operations.
+
+## What Changed
+
+This project is now a standard static React application:
+
+- No SSR
+- No TanStack Start
+- No generated route tree
+- No server output
+- No platform-specific build adapter
+- Standard `index.html` + `src/main.tsx` entry
+- Standard Vite output in `dist/`
 
 ## Features
 
-- Multi-page app: Map, Stations, Booking, Payments, Rewards, Admin, Login
+- Multi-page client-side app: Map, Stations, Booking, Payment, Rewards, Admin, Login
 - Interactive Leaflet + OpenStreetMap station map with clustered markers
 - Expanded NCR demo network with operators, connectors, power, peak hours, queue states, amenities, and reliability data
 - Filters for city, charger type, connector, availability, distance, price, and battery reachability
-- Station booking panel with live queue states: `waiting`, `next`, `arrived`, `charging`, `completed`, `skipped`
+- Station booking panel with queue states: `waiting`, `next`, `arrived`, `charging`, `completed`, `skipped`
 - External Supabase email/password Auth with a `profiles` table for driver data
 - Queue join, QR check-in simulation, start charging, and final payment flow
 - Reliability verification with cable condition and reward coins
@@ -21,11 +33,32 @@ A full React + TypeScript web app for EV charging station discovery, slot bookin
 ## Tech Stack
 
 - React 19 + TypeScript
-- Vite / TanStack Start project shell
+- Vite
+- React Router DOM
 - Tailwind CSS v4
 - Zustand state management
 - Leaflet, React Leaflet, OpenStreetMap tiles
 - Supabase JS client for direct external Auth, Postgres, Realtime, and Storage integration
+
+## Project Structure
+
+```text
+index.html
+src/
+  App.tsx
+  main.tsx
+  styles.css
+  components/
+  hooks/
+  lib/
+  services/
+  store/
+  types/
+package.json
+vite.config.ts
+tsconfig.json
+eslint.config.js
+```
 
 ## App Routes
 
@@ -34,14 +67,15 @@ A full React + TypeScript web app for EV charging station discovery, slot bookin
 | `/` | Live charging map, filters, recommendations, selected station panel |
 | `/stations` | Station directory with richer filter options |
 | `/booking` | Slot booking, queue, QR check-in, verification |
-| `/payments` | UPI-style payment simulation and transaction ledger |
+| `/payment` | UPI-style payment simulation and transaction ledger |
+| `/payments` | Redirects to `/payment` for compatibility |
 | `/rewards` | Driver coins, reward rules, redemption status |
 | `/admin` | Operator dashboard and station list |
 | `/login` | Login/signup with Supabase Auth and driver profile fields |
 
 ## Environment Variables
 
-Create these variables in Vercel, Netlify, and local development if you want live Supabase Auth/database access:
+Create these variables locally and in any host if you want live Supabase Auth/database access:
 
 ```bash
 VITE_SUPABASE_URL=your_supabase_project_url
@@ -62,6 +96,7 @@ In Supabase Dashboard:
 4. Add deployed URLs to **Authentication → URL Configuration**:
    - Vercel URL
    - Netlify URL
+   - GitHub Pages URL
    - `http://localhost:5173`
 
 ### 2. Database Schema
@@ -299,42 +334,54 @@ Open the local URL printed by Vite.
 bun run build
 ```
 
-## Vercel Deployment
+The static build is written to:
 
-This repo includes `vercel.json` for static SPA hosting.
+```text
+dist/
+  index.html
+  assets/
+```
+
+## Deployment
+
+### Vercel
 
 1. Push the repository to GitHub.
 2. Import the project in Vercel.
-3. Add environment variables:
+3. Add environment variables if using Supabase:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 4. Build command: `bun run build`
-5. Output directory: `dist/client`
+5. Output directory: `dist`
 6. Deploy.
 
-`vercel.json` rewrites all paths to `index.html`, so direct visits to `/stations`, `/booking`, `/payments`, `/rewards`, `/admin`, and `/login` work.
-
-## Netlify Deployment
-
-This repo includes `netlify.toml` for static SPA hosting.
+### Netlify
 
 1. Push the repository to GitHub.
 2. Import the project in Netlify.
-3. Add environment variables:
+3. Add environment variables if using Supabase:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 4. Build command: `bun run build`
-5. Publish directory: `dist/client`
+5. Publish directory: `dist`
 6. Deploy.
 
-`netlify.toml` includes the SPA redirect rule for all routes.
+### GitHub Pages
 
-## No-SSR Static Hosting Notes
+1. Build locally or in GitHub Actions:
+   ```bash
+   bun install
+   bun run build
+   ```
+2. Publish the `dist` folder.
+3. If hosting under a repository subpath, set the correct Vite base before building, for example:
+   ```bash
+   bunx vite build --base=/your-repo-name/
+   ```
 
-- The hosted static output is `dist/client`.
-- Leaflet is browser-loaded to avoid server-side `window` errors.
-- Do not deploy `dist/server` for Vercel/Netlify static hosting.
-- The app uses client-side Supabase calls through the public anon key and RLS policies.
+## Routing Notes
+
+This is a pure client-side React Router app. Vercel and Netlify can serve it from `dist` as a static site. For direct refreshes on nested routes like `/stations` or `/payment`, configure your host to fallback to `index.html` if needed. GitHub Pages does not support fallback routing by default, so use the root URL first or add a standard Pages fallback workflow if deep-link refresh support is required.
 
 ## Future Integrations
 
