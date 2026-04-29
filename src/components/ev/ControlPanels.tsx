@@ -7,7 +7,6 @@ import { Slider } from "@/components/ui/slider";
 import { Progress } from "@/components/ui/progress";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
-import { isSupabaseConfigured } from "@/services/supabaseClient";
 
 export function TopBar() {
   const { user, isAuthenticated, logout } = useEvStore();
@@ -290,7 +289,7 @@ export function AdminPanel() {
 }
 
 export function AuthPanel() {
-  const { login, signup, authError, isAuthenticated, user, logout } = useEvStore();
+  const { login, loginWithGoogle, signup, authError, isAuthenticated, user, logout } = useEvStore();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -305,6 +304,18 @@ export function AuthPanel() {
       else await signup(form);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    setLoading(true);
+    setError("");
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
     } finally {
       setLoading(false);
     }
@@ -325,12 +336,17 @@ export function AuthPanel() {
     <section className="mx-auto w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-card">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Supabase Auth</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Lovable Cloud Auth</p>
           <h2 className="text-2xl font-black">{mode === "login" ? "Login" : "Create driver profile"}</h2>
         </div>
         <Button variant="secondary" onClick={() => setMode(mode === "login" ? "signup" : "login")}>{mode === "login" ? "Sign up" : "Login"}</Button>
       </div>
-      {!isSupabaseConfigured ? <p className="mt-4 rounded-xl bg-secondary p-3 text-sm text-muted-foreground">Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable live external Supabase Auth. This preview is in demo mode.</p> : null}
+      <Button className="mt-6 w-full" type="button" variant="outline" disabled={loading} onClick={() => void handleGoogleLogin()}>
+        <UserRound className="size-4" /> Continue with Google
+      </Button>
+      <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="h-px flex-1 bg-border" /> Email <span className="h-px flex-1 bg-border" />
+      </div>
       <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
         {mode === "signup" ? <Input required placeholder="Full name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /> : null}
         <Input required type="email" placeholder="Email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
