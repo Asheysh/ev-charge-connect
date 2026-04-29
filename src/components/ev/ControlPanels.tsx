@@ -153,16 +153,16 @@ export function RecommendationRail() {
   const filteredStations = useFilteredStations();
   const setSelectedStation = useEvStore((state) => state.setSelectedStation);
   return (
-    <div className="grid gap-3 lg:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-3">
       {filteredStations.slice(0, 3).map((station, index) => (
-        <button key={station.id} onClick={() => setSelectedStation(station.id)} className="group rounded-2xl border border-border bg-card p-4 text-left shadow-card transition hover:-translate-y-1 hover:shadow-panel">
+        <button key={station.id} onClick={() => setSelectedStation(station.id)} className="group glass-panel premium-border rounded-3xl border p-4 text-left transition duration-300 hover:-translate-y-1 hover:shadow-panel">
           <div className="flex items-center justify-between">
-            <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground">#{index + 1} recommended</span>
-            <span className="text-sm font-bold text-primary">{station.reliability_score}%</span>
+            <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-glow">#{index + 1} recommended</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-sm font-bold text-primary">{station.reliability_score}%</span>
           </div>
-          <h3 className="mt-4 text-lg font-black">{station.name}</h3>
+          <h3 className="mt-4 text-xl font-black tracking-tight">{station.name}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{station.distance_km} km · {station.available_slots} slots · {station.wait_minutes} min wait</p>
-          <p className="mt-2 text-xs text-muted-foreground">{station.connector_types.join(" / ")} · {station.power_kw} kW</p>
+          <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted-foreground"><Navigation className="size-3.5 text-primary" /> {station.connector_types.join(" / ")} · {station.power_kw} kW</p>
         </button>
       ))}
     </div>
@@ -175,14 +175,14 @@ export function StationsDirectory() {
   return (
     <section className="grid gap-4 lg:grid-cols-3">
       {stations.map((station) => (
-        <article key={station.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+        <article key={station.id} className="glass-panel premium-border rounded-3xl border p-5 transition duration-300 hover:-translate-y-1 hover:shadow-panel">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{station.operator}</p>
               <h2 className="mt-2 text-xl font-black">{station.name}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{station.address}</p>
             </div>
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold">{station.status}</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold capitalize">{station.status}</span>
           </div>
           <div className="mt-4 grid grid-cols-4 gap-2 text-sm">
             <Metric label="Slots" value={`${station.available_slots}/${station.total_slots}`} icon={<Zap />} />
@@ -210,7 +210,7 @@ export function PaymentPanel() {
 
   return (
     <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="glass-panel premium-border rounded-3xl border p-6">
         <div className="flex items-center gap-3"><QrCode className="size-6 text-primary" /><h2 className="text-2xl font-black">Simulated UPI payment</h2></div>
         <div className="mx-auto mt-6 grid size-56 place-items-center rounded-2xl border border-border bg-background p-5 shadow-inner">
           <div className="grid grid-cols-5 gap-1">
@@ -223,7 +223,7 @@ export function PaymentPanel() {
         </div>
         <Button className="mt-5 w-full" variant="hero" onClick={() => void completePayment(station.id, amount)}>Mark payment successful</Button>
       </div>
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="glass-panel premium-border rounded-3xl border p-6">
         <h3 className="text-xl font-black">Transaction ledger</h3>
         <div className="mt-4 space-y-3">
           {transactions.length === 0 ? <EmptyLine text="No payments yet. Complete a simulated UPI payment to create the first transaction." /> : transactions.map((txn) => (
