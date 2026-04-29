@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Award, BarChart3, BatteryCharging, Gauge, IndianRupee, LogOut, Map, QrCode, Search, Settings2, ShieldCheck, UserRound, Users, WalletCards, Zap } from "lucide-react";
+import { Award, BarChart3, BatteryCharging, Gauge, IndianRupee, LogOut, Map, Navigation, QrCode, Search, Settings2, ShieldCheck, Sparkles, UserRound, Users, WalletCards, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -22,10 +22,10 @@ export function TopBar() {
   ] as const;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/88 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/82 backdrop-blur-2xl">
       <div className="mx-auto flex max-w-[1560px] flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
         <Link to="/" className="flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-glow">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-glow ring-1 ring-primary/20">
             <BatteryCharging className="size-6" />
           </div>
           <div>
@@ -33,7 +33,7 @@ export function TopBar() {
             <p className="text-xs text-muted-foreground">India-ready station discovery, queues, UPI and rewards</p>
           </div>
         </Link>
-        <nav className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-card p-1 shadow-card">
+        <nav className="glass-panel premium-border flex gap-1 overflow-x-auto rounded-2xl border p-1.5">
           {tabs.map(([to, label, Icon]) => {
             const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
             return (
@@ -49,7 +49,7 @@ export function TopBar() {
             );
           })}
         </nav>
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-3 py-2 shadow-card">
+        <div className="glass-panel premium-border flex items-center gap-3 rounded-2xl border px-3 py-2">
           <div className="text-right">
             <p className="text-sm font-bold">{user.name}</p>
             <p className="text-xs text-muted-foreground">{isAuthenticated ? "Signed in" : "Demo mode"} · {user.coins} coins</p>
@@ -79,7 +79,7 @@ export function PageFrame({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <TopBar />
-      <div className="mx-auto grid max-w-[1560px] gap-5 px-4 py-5 lg:px-6">{children}</div>
+      <div className="mx-auto grid max-w-[1560px] gap-6 px-4 py-6 lg:px-6">{children}</div>
     </main>
   );
 }
@@ -91,25 +91,25 @@ export function FilterPanel() {
   const connectors = useMemo(() => Array.from(new Set(stations.flatMap((station) => station.connector_types))).sort(), [stations]);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+    <div className="glass-panel premium-border rounded-3xl border p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Filters</p>
-          <h2 className="text-xl font-black">Find the best charger</h2>
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary"><Sparkles className="size-3.5" /> Filters</p>
+          <h2 className="text-2xl font-black tracking-tight">Find the best charger</h2>
         </div>
         <Settings2 className="size-5 text-muted-foreground" />
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <label className="space-y-2">
           <span className="text-sm font-semibold">City</span>
-          <select value={filters.city} onChange={(event) => setFilters({ city: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
+          <select value={filters.city} onChange={(event) => setFilters({ city: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-card/70 px-3 text-sm shadow-sm outline-none ring-offset-background transition focus:ring-2 focus:ring-ring">
             <option value="all">All cities</option>
             {cities.map((city) => <option key={city} value={city}>{city}</option>)}
           </select>
         </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold">Charger type</span>
-          <select value={filters.chargerType} onChange={(event) => setFilters({ chargerType: event.target.value as typeof filters.chargerType })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
+          <select value={filters.chargerType} onChange={(event) => setFilters({ chargerType: event.target.value as typeof filters.chargerType })} className="h-11 w-full rounded-xl border border-input bg-card/70 px-3 text-sm shadow-sm outline-none ring-offset-background transition focus:ring-2 focus:ring-ring">
             <option value="all">All chargers</option>
             <option value="AC">AC</option>
             <option value="DC">DC</option>
@@ -118,14 +118,14 @@ export function FilterPanel() {
         </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold">Connector</span>
-          <select value={filters.connector} onChange={(event) => setFilters({ connector: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
+          <select value={filters.connector} onChange={(event) => setFilters({ connector: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-card/70 px-3 text-sm shadow-sm outline-none ring-offset-background transition focus:ring-2 focus:ring-ring">
             <option value="all">All connectors</option>
             {connectors.map((connector) => <option key={connector} value={connector}>{connector}</option>)}
           </select>
         </label>
         <label className="space-y-2">
           <span className="text-sm font-semibold">Availability</span>
-          <select value={filters.availability} onChange={(event) => setFilters({ availability: event.target.value as typeof filters.availability })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none ring-offset-background focus:ring-2 focus:ring-ring">
+          <select value={filters.availability} onChange={(event) => setFilters({ availability: event.target.value as typeof filters.availability })} className="h-11 w-full rounded-xl border border-input bg-card/70 px-3 text-sm shadow-sm outline-none ring-offset-background transition focus:ring-2 focus:ring-ring">
             <option value="all">All statuses</option>
             <option value="available">Available now</option>
             <option value="busy">Queue only</option>
