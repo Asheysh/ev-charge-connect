@@ -74,15 +74,26 @@ export const useEvStore = create<EvState>((set, get) => ({
     set({ user: demoUser, isAuthenticated: false });
   },
   loadStations: async () => {
-    const loadedStations = await fetchStations();
-    set({ stations: loadedStations, selectedStationId: loadedStations[0]?.id ?? get().selectedStationId });
+    try {
+      const loadedStations = await fetchStations();
+      const safeStations = loadedStations.length > 0 ? loadedStations : seedStations;
+      const currentSelection = get().selectedStationId;
+      const selectedStationId = safeStations.some((station) => station.id === currentSelection) ? currentSelection : safeStations[0].id;
+      set({ stations: safeStations, selectedStationId });
+    } catch (error) {
+      set({ stations: seedStations, selectedStationId: seedStations[0].id });
+    }
   },
   setSelectedStation: (stationId) => set({ selectedStationId: stationId }),
   setFilters: (filters) => set((state) => ({ filters: { ...state.filters, ...filters } })),
   setBatteryPercent: (batteryPercent) => set({ batteryPercent }),
   refreshQueue: async (stationId) => {
-    const queue = await fetchQueue(stationId);
-    set((state) => ({ queues: { ...state.queues, [stationId]: queue } }));
+    try {
+      const queue = await fetchQueue(stationId);
+      set((state) => ({ queues: { ...state.queues, [stationId]: queue } }));
+    } catch (error) {
+      set((state) => ({ queues: { ...state.queues, [stationId]: [] } }));
+    }
   },
   joinQueue: async (stationId) => {
     const { user } = get();

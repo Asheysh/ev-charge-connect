@@ -6,6 +6,13 @@ import { useEvStore } from "@/store/evStore";
 export function StationPanel() {
   const { stations, selectedStationId, queues, user, joinQueue, checkIn, startCharging, verifyStation } = useEvStore();
   const station = stations.find((item) => item.id === selectedStationId) ?? stations[0];
+  if (!station) {
+    return (
+      <aside className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground shadow-card">
+        Loading charging station details…
+      </aside>
+    );
+  }
   const queue = queues[station.id] ?? [];
   const userQueue = queue.find((entry) => entry.user_id === user.id);
   const estimate = Math.round(22 * station.price_per_kwh);

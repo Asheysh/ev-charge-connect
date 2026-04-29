@@ -206,6 +206,7 @@ export function StationsDirectory() {
 export function PaymentPanel() {
   const { stations, selectedStationId, completePayment, transactions } = useEvStore();
   const station = stations.find((item) => item.id === selectedStationId) ?? stations[0];
+  if (!station) return <EmptyLine text="Loading payment details…" />;
   const amount = Math.round(station.price_per_kwh * 22);
 
   return (
@@ -262,6 +263,7 @@ export function RewardsPanel() {
 export function AdminPanel() {
   const stations = useEvStore((state) => state.stations);
   const activeSessions = stations.reduce((sum, station) => sum + (station.total_slots - station.available_slots), 0);
+  const averageReliability = stations.length > 0 ? Math.round(stations.reduce((s, x) => s + x.reliability_score, 0) / stations.length) : 0;
   return (
     <section className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
       <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
@@ -269,7 +271,7 @@ export function AdminPanel() {
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Metric label="Stations" value={stations.length.toString()} icon={<Zap />} />
           <Metric label="Active slots" value={activeSessions.toString()} icon={<Gauge />} />
-          <Metric label="Avg reliability" value={`${Math.round(stations.reduce((s, x) => s + x.reliability_score, 0) / stations.length)}%`} icon={<ShieldCheck />} />
+          <Metric label="Avg reliability" value={`${averageReliability}%`} icon={<ShieldCheck />} />
           <Metric label="Revenue today" value="₹28.7k" icon={<IndianRupee />} />
         </div>
       </div>
