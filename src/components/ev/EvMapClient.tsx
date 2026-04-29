@@ -44,7 +44,7 @@ export default function EvMapClient() {
   const setSelectedStation = useEvStore((state) => state.setSelectedStation);
 
   return (
-    <div className="relative min-h-[520px] overflow-hidden rounded-2xl border border-border bg-card shadow-panel lg:min-h-[720px]">
+    <div className="premium-border relative min-h-[520px] overflow-hidden rounded-3xl border bg-card shadow-panel ring-1 ring-primary/5 lg:min-h-[720px]">
       <MapContainer center={[28.59, 77.21]} zoom={11} scrollWheelZoom className="h-full min-h-[520px] lg:min-h-[720px]">
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -66,7 +66,7 @@ export default function EvMapClient() {
         </MarkerClusterGroup>
       </MapContainer>
 
-      <div className="pointer-events-none absolute left-4 top-4 z-[500] rounded-xl border border-border bg-card/90 p-3 shadow-card backdrop-blur-xl">
+      <div className="glass-panel premium-border pointer-events-none absolute left-4 top-4 z-[500] rounded-2xl border p-3">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <MapPin className="size-4 text-primary" /> NCR charging grid
         </div>
@@ -81,7 +81,7 @@ export default function EvMapClient() {
         {filteredStations.slice(0, 3).map((station) => (
           <div
             key={station.id}
-            className={`rounded-xl border px-3 py-2 text-xs shadow-card backdrop-blur-xl ${
+            className={`rounded-2xl border px-3 py-2 text-xs shadow-card backdrop-blur-xl transition ${
               selectedStationId === station.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card/90"
             }`}
           >

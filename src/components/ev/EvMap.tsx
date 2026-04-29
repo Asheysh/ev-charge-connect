@@ -5,7 +5,7 @@ const EvMapClient = lazy(() => import("./EvMapClient"));
 
 function MapFallback() {
   return (
-    <div className="grid min-h-[520px] place-items-center rounded-2xl border border-border bg-card shadow-panel lg:min-h-[720px]">
+    <div className="glass-panel premium-border grid min-h-[520px] place-items-center rounded-3xl border shadow-panel lg:min-h-[720px]">
       <div className="text-center">
         <MapPin className="mx-auto size-8 text-primary" />
         <p className="mt-3 text-sm font-semibold">Loading charging map</p>

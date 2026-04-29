@@ -19,14 +19,14 @@ export function StationPanel() {
 
   return (
     <aside className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="glass-panel premium-border rounded-3xl border p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Selected station</p>
             <h2 className="mt-2 text-2xl font-black tracking-tight">{station.name}</h2>
             <p className="mt-2 text-sm text-muted-foreground">{station.address}</p>
           </div>
-          <div className="rounded-xl bg-secondary px-3 py-2 text-center">
+          <div className="rounded-2xl bg-secondary px-3 py-2 text-center shadow-sm">
             <p className="text-xl font-black">{station.reliability_score}%</p>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">reliable</p>
           </div>
@@ -70,7 +70,7 @@ export function StationPanel() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
+      <div className="glass-panel premium-border rounded-3xl border p-5">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">Live queue</h3>
           <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">Realtime ready</span>
@@ -97,7 +97,7 @@ export function StationPanel() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border bg-gradient-soft p-5 shadow-card">
+      <div className="premium-border rounded-3xl border bg-gradient-soft p-5 shadow-card">
         <div className="flex items-center gap-3">
           <Battery className="size-5 text-primary" />
           <div>

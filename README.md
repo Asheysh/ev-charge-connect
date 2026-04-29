@@ -1,6 +1,6 @@
 # Smart EV Charging Assistant Platform
 
-A portable, client-side React + Vite web app for EV charging station discovery, slot booking, queue management, QR-style check-in, Lovable Cloud authentication, driver profiles, simulated UPI payments, rewards, and admin operations.
+A portable, client-side React + Vite web app for EV charging station discovery, slot booking, queue management, QR-style check-in, Supabase authentication, driver profiles, simulated UPI payments, rewards, and admin operations.
 
 ## Current Architecture
 
@@ -21,8 +21,8 @@ This project is a standard static React application:
 - Expanded NCR demo network with operators, connectors, power, peak hours, queue states, amenities, and reliability data
 - Filters for city, charger type, connector, availability, distance, price, and battery reachability
 - Station booking panel with queue states: `waiting`, `next`, `arrived`, `charging`, `completed`, `skipped`
-- Lovable Cloud email/password authentication with driver profile records
-- Managed Google sign-in through Lovable Cloud
+- Supabase email/password authentication with driver profile records
+- Google sign-in through Supabase Auth when enabled in the project
 - Queue join, QR check-in simulation, start charging, and final payment flow
 - Reliability verification with cable condition and reward coins
 - Battery-based station recommendations and backup station ranking
@@ -39,7 +39,7 @@ This project is a standard static React application:
 - Tailwind CSS v4
 - Zustand state management
 - Leaflet, React Leaflet, OpenStreetMap tiles
-- Lovable Cloud for authentication, profiles, and backend data
+- Supabase for authentication, profiles, and optional backend data
 
 ## Project Structure
 
@@ -71,11 +71,11 @@ vite.config.ts
 | `/payments` | Redirects to `/payment` for compatibility |
 | `/rewards` | Driver coins, reward rules, redemption status |
 | `/admin` | Operator dashboard and station list |
-| `/login` | Login/signup with Lovable Cloud Auth and driver profile fields |
+| `/login` | Login/signup with Supabase Auth and driver profile fields |
 
 ## Backend / Auth Setup
 
-Lovable Cloud is connected and powers:
+The client app is wired to Supabase and can run as a static site anywhere. It uses:
 
 - Email/password sign up and login
 - Google sign-in
@@ -83,7 +83,12 @@ Lovable Cloud is connected and powers:
 - Secure profile access rules so each user can only access their own profile
 - Optional live queue, transaction, verification, and station tables when populated
 
-No external backend URL or publishable key needs to be added to source code. Lovable automatically provides the required public configuration at build/runtime.
+Default public configuration is included in `src/services/supabaseClient.ts`. To override it per deployment, set:
+
+```text
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
 
 ## Local Development
 
