@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      chargers: {
+        Row: {
+          connector: string
+          created_at: string
+          id: string
+          power_kw: number | null
+          station_id: string
+          status: string
+          type: string
+        }
+        Insert: {
+          connector?: string
+          created_at?: string
+          id?: string
+          power_kw?: number | null
+          station_id: string
+          status?: string
+          type?: string
+        }
+        Update: {
+          connector?: string
+          created_at?: string
+          id?: string
+          power_kw?: number | null
+          station_id?: string
+          status?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chargers_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           coins: number
@@ -50,6 +88,228 @@ export type Database = {
           updated_at?: string
           vehicle_model?: string | null
           vehicle_range_km?: number
+        }
+        Relationships: []
+      }
+      queue: {
+        Row: {
+          created_at: string
+          eta_minutes: number
+          id: string
+          position: number
+          station_id: string
+          status: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          eta_minutes?: number
+          id?: string
+          position?: number
+          station_id: string
+          status?: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          eta_minutes?: number
+          id?: string
+          position?: number
+          station_id?: string
+          status?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews_verification: {
+        Row: {
+          cable_condition: string
+          created_at: string
+          id: string
+          image_url: string | null
+          station_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cable_condition: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          station_id: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          cable_condition?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          station_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_verification_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          cost: number
+          end_time: string | null
+          energy_used: number
+          id: string
+          start_time: string
+          station_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number
+          end_time?: string | null
+          energy_used?: number
+          id?: string
+          start_time?: string
+          station_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          end_time?: string | null
+          energy_used?: number
+          id?: string
+          start_time?: string
+          station_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stations: {
+        Row: {
+          address: string
+          amenities: string[]
+          available_slots: number
+          charger_type: string
+          city: string
+          connector_types: string[]
+          created_at: string
+          distance_km: number
+          id: string
+          image_url: string | null
+          last_verified: string
+          lat: number
+          lng: number
+          name: string
+          operator: string | null
+          peak_hours: string | null
+          power_kw: number | null
+          price_per_kwh: number
+          reliability_score: number
+          status: string
+          total_slots: number
+          wait_minutes: number
+        }
+        Insert: {
+          address: string
+          amenities?: string[]
+          available_slots?: number
+          charger_type: string
+          city: string
+          connector_types?: string[]
+          created_at?: string
+          distance_km?: number
+          id?: string
+          image_url?: string | null
+          last_verified?: string
+          lat: number
+          lng: number
+          name: string
+          operator?: string | null
+          peak_hours?: string | null
+          power_kw?: number | null
+          price_per_kwh?: number
+          reliability_score?: number
+          status?: string
+          total_slots?: number
+          wait_minutes?: number
+        }
+        Update: {
+          address?: string
+          amenities?: string[]
+          available_slots?: number
+          charger_type?: string
+          city?: string
+          connector_types?: string[]
+          created_at?: string
+          distance_km?: number
+          id?: string
+          image_url?: string | null
+          last_verified?: string
+          lat?: number
+          lng?: number
+          name?: string
+          operator?: string | null
+          peak_hours?: string | null
+          power_kw?: number | null
+          price_per_kwh?: number
+          reliability_score?: number
+          status?: string
+          total_slots?: number
+          wait_minutes?: number
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }
