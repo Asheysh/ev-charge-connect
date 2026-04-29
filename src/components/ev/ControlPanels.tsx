@@ -242,13 +242,13 @@ export function RewardsPanel() {
   const tiers = [{ label: "Verify stations", value: 75 }, { label: "Join queue", value: 25 }, { label: "Complete charge", value: 40 }];
   return (
     <section className="grid gap-5 lg:grid-cols-3">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card lg:col-span-1">
+        <div className="glass-panel premium-border rounded-3xl border p-6 lg:col-span-1">
         <Award className="size-8 text-primary" />
         <h2 className="mt-4 text-4xl font-black">{user.coins}</h2>
         <p className="text-muted-foreground">coins available for discounts and priority queue boosts</p>
         <Progress value={Math.min(100, (user.coins / 2000) * 100)} className="mt-5 h-2" />
       </div>
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card lg:col-span-2">
+      <div className="glass-panel premium-border rounded-3xl border p-6 lg:col-span-2">
         <h3 className="text-xl font-black">Reward rules</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {tiers.map((tier) => <div key={tier.label} className="rounded-xl bg-secondary p-4"><p className="font-bold">+{tier.value}</p><p className="text-sm text-muted-foreground">{tier.label}</p></div>)}
@@ -265,7 +265,7 @@ export function AdminPanel() {
   const averageReliability = stations.length > 0 ? Math.round(stations.reduce((s, x) => s + x.reliability_score, 0) / stations.length) : 0;
   return (
     <section className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="glass-panel premium-border rounded-3xl border p-6">
         <h2 className="text-2xl font-black">Admin command centre</h2>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Metric label="Stations" value={stations.length.toString()} icon={<Zap />} />
@@ -274,7 +274,7 @@ export function AdminPanel() {
           <Metric label="Revenue today" value="₹28.7k" icon={<IndianRupee />} />
         </div>
       </div>
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+      <div className="glass-panel premium-border rounded-3xl border p-6">
         <div className="flex items-center gap-2"><Search className="size-5 text-primary" /><Input placeholder="Search stations, charger IDs, operators" /></div>
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           {stations.map((station) => (
@@ -323,7 +323,7 @@ export function AuthPanel() {
 
   if (isAuthenticated) {
     return (
-      <section className="mx-auto w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-card">
+      <section className="glass-panel premium-border mx-auto w-full max-w-2xl rounded-3xl border p-6">
         <UserRound className="size-8 text-primary" />
         <h2 className="mt-4 text-2xl font-black">Signed in as {user.name}</h2>
         <p className="mt-2 text-muted-foreground">{user.email} · {user.vehicleModel ?? "EV profile ready"}</p>
@@ -333,10 +333,10 @@ export function AuthPanel() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-card">
+    <section className="glass-panel premium-border mx-auto w-full max-w-2xl rounded-3xl border p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Lovable Cloud Auth</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Supabase Auth</p>
           <h2 className="text-2xl font-black">{mode === "login" ? "Login" : "Create driver profile"}</h2>
         </div>
         <Button variant="secondary" onClick={() => setMode(mode === "login" ? "signup" : "login")}>{mode === "login" ? "Sign up" : "Login"}</Button>
