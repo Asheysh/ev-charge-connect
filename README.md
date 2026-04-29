@@ -73,14 +73,21 @@ vite.config.ts
 
 ## Environment Variables
 
-Create these variables locally and in any host if you want live Supabase Auth/database access:
+This app is already wired to this external Supabase project by default:
+
+```bash
+VITE_SUPABASE_URL=https://knasrxgmdhlxhllcuheq.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_bzQP0t3Ht4xodz9jRH_uVQ_UVtyR71y
+```
+
+You can still override them locally or in any host if you want to point the app to a different Supabase project:
 
 ```bash
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-The app still runs with bundled dummy data if these variables are absent.
+The public publishable key is safe to expose in a client-side app. If both defaults and environment variables are removed, the app falls back to bundled dummy data.
 
 ## Supabase Setup
 
