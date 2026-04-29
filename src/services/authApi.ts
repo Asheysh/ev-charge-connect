@@ -1,5 +1,6 @@
 import type { Session, User } from "@supabase/supabase-js";
 import type { UserProfile } from "@/types/ev";
+import { lovable } from "@/integrations/lovable";
 import { demoUser } from "./seedData";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -84,6 +85,13 @@ export async function signUpWithEmail(input: { email: string; password: string; 
     ? await upsertProfile({ id: data.user.id, name: input.name, email: input.email, phone: input.phone, vehicleModel: input.vehicleModel })
     : demoUser;
   return { user: data.user, session: data.session, profile };
+}
+
+export async function signInWithGoogle(): Promise<AuthStatePayload> {
+  const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+  if (result.error) throw result.error;
+  if (result.redirected) return { user: null, session: null, profile: demoUser };
+  return getCurrentAuth();
 }
 
 export async function signOutUser() {

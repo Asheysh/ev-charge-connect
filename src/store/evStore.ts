@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { QueueEntry, Station, StationFilters, Transaction, UserProfile, Verification } from "@/types/ev";
 import { demoUser, stations as seedStations } from "@/services/seedData";
 import { createUpiTransaction, fetchQueue, fetchStations, joinStationQueue, submitVerification } from "@/services/evApi";
-import { getCurrentAuth, signInWithEmail, signOutUser, signUpWithEmail } from "@/services/authApi";
+import { getCurrentAuth, signInWithEmail, signInWithGoogle, signOutUser, signUpWithEmail } from "@/services/authApi";
 
 interface EvState {
   user: UserProfile;
@@ -18,6 +18,7 @@ interface EvState {
   transactions: Transaction[];
   loadAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (input: { name: string; email: string; password: string; phone?: string; vehicleModel?: string }) => Promise<void>;
   logout: () => Promise<void>;
   setSelectedStation: (stationId: string) => void;
@@ -63,6 +64,10 @@ export const useEvStore = create<EvState>((set, get) => ({
   },
   login: async (email, password) => {
     const auth = await signInWithEmail(email, password);
+    set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authError: "" });
+  },
+  loginWithGoogle: async () => {
+    const auth = await signInWithGoogle();
     set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authError: "" });
   },
   signup: async (input) => {
