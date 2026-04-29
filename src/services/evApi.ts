@@ -41,7 +41,7 @@ export async function joinStationQueue(stationId: string, userId: string, userNa
     created_at: new Date().toISOString(),
   };
 
-  if (!isSupabaseConfigured || !supabase || !isUuid(stationId)) return entry;
+  if (!isSupabaseConfigured || !supabase || !isUuid(stationId) || !isUuid(userId)) return entry;
   const { data, error } = await supabase.from("queue").insert(entry).select().single();
   if (error) throw new Error(`Failed to join queue: ${error.message}`);
   return data as QueueEntry;
@@ -49,7 +49,7 @@ export async function joinStationQueue(stationId: string, userId: string, userNa
 
 export async function submitVerification(payload: Omit<Verification, "id" | "created_at">): Promise<Verification> {
   const verification: Verification = { ...payload, id: crypto.randomUUID(), created_at: new Date().toISOString() };
-  if (!isSupabaseConfigured || !supabase || !isUuid(payload.station_id)) return verification;
+  if (!isSupabaseConfigured || !supabase || !isUuid(payload.station_id) || !isUuid(payload.user_id)) return verification;
   const { data, error } = await supabase.from("reviews_verification").insert(verification).select().single();
   if (error) throw new Error(`Failed to submit verification: ${error.message}`);
   return data as Verification;
@@ -64,7 +64,7 @@ export async function createUpiTransaction(userId: string, amount: number): Prom
     status: "success",
     created_at: new Date().toISOString(),
   };
-  if (!isSupabaseConfigured || !supabase) return transaction;
+  if (!isSupabaseConfigured || !supabase || !isUuid(userId)) return transaction;
   const { data, error } = await supabase.from("transactions").insert(transaction).select().single();
   if (error) throw new Error(`Failed to create transaction: ${error.message}`);
   return data as Transaction;
