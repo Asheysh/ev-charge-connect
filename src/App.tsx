@@ -71,7 +71,7 @@ export default function App() {
         <Route path="/payments" element={<Navigate to="/payment" replace />} />
         <Route path="/rewards" element={<PageFrame><RewardsPanel /></PageFrame>} />
         <Route path="/planner" element={<PageFrame><TravelPlanner /></PageFrame>} />
-        <Route path="/admin" element={<PageFrame><AdminPanel /><AdminStationManager /></PageFrame>} />
+        <Route path="/admin" element={<PageFrame><div className="grid gap-5"><AdminPanel /><AdminStationManager /></div></PageFrame>} />
         <Route path="/login" element={<PageFrame><AuthPanel /></PageFrame>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
