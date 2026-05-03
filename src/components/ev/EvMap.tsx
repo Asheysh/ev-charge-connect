@@ -14,7 +14,12 @@ function MapFallback() {
   );
 }
 
-export function EvMap() {
+export interface EvMapProps {
+  pickMode?: boolean;
+  onPickLocation?: (lat: number, lng: number) => void;
+}
+
+export function EvMap(props: EvMapProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -25,7 +30,7 @@ export function EvMap() {
 
   return (
     <Suspense fallback={<MapFallback />}>
-      <EvMapClient />
+      <EvMapClient {...props} />
     </Suspense>
   );
 }

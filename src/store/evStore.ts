@@ -3,12 +3,23 @@ import type { QueueEntry, Station, StationFilters, Transaction, UserProfile, Ver
 import { demoUser, stations as seedStations } from "@/services/seedData";
 import { createUpiTransaction, fetchQueue, fetchStations, joinStationQueue, submitVerification } from "@/services/evApi";
 import { getCurrentAuth, signInWithEmail, signInWithGoogle, signOutUser, signUpWithEmail } from "@/services/authApi";
+import type { LatLng, RouteResult } from "@/lib/geo";
+import { isSupabaseConfigured, supabase } from "@/services/supabaseClient";
+
+export const guestUser: UserProfile = {
+  ...demoUser,
+  id: "guest",
+  name: "Guest",
+  email: "guest@local",
+  coins: 0,
+};
 
 interface EvState {
   user: UserProfile;
   authReady: boolean;
   authError: string;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   stations: Station[];
   selectedStationId: string;
   filters: StationFilters;
@@ -16,6 +27,13 @@ interface EvState {
   queues: Record<string, QueueEntry[]>;
   verifications: Verification[];
   transactions: Transaction[];
+  liveLocation: LatLng | null;
+  setLiveLocation: (loc: LatLng | null) => void;
+  activeRoute: RouteResult | null;
+  setActiveRoute: (r: RouteResult | null) => void;
+  addStation: (s: Station) => void;
+  updateStation: (id: string, patch: Partial<Station>) => void;
+  removeStation: (id: string) => void;
   loadAuth: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -43,10 +61,11 @@ const defaultFilters: StationFilters = {
 };
 
 export const useEvStore = create<EvState>((set, get) => ({
-  user: demoUser,
+  user: guestUser,
   authReady: false,
   authError: "",
   isAuthenticated: false,
+  isAdmin: false,
   stations: seedStations,
   selectedStationId: seedStations[0].id,
   filters: defaultFilters,
@@ -54,10 +73,31 @@ export const useEvStore = create<EvState>((set, get) => ({
   queues: {},
   verifications: [],
   transactions: [],
+  liveLocation: null,
+  setLiveLocation: (loc) => set({ liveLocation: loc }),
+  activeRoute: null,
+  setActiveRoute: (r) => set({ activeRoute: r }),
+  addStation: (s) => set((st) => ({ stations: [s, ...st.stations] })),
+  updateStation: (id, patch) =>
+    set((st) => ({ stations: st.stations.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+  removeStation: (id) =>
+    set((st) => ({ stations: st.stations.filter((x) => x.id !== id) })),
   loadAuth: async () => {
     try {
       const auth = await getCurrentAuth();
-      set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authReady: true, authError: "" });
+      const isAuthenticated = Boolean(auth.user);
+      let isAdmin = false;
+      if (isAuthenticated && isSupabaseConfigured && supabase && auth.user) {
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", auth.user.id);
+        isAdmin = (data ?? []).some((r) => r.role === "admin");
+      }
+      set({
+        user: isAuthenticated ? auth.profile : guestUser,
+        isAuthenticated,
+        isAdmin,
+        authReady: true,
+        authError: "",
+      });
     } catch (error) {
       set({ authReady: true, authError: error instanceof Error ? error.message : "Could not load auth" });
     }
@@ -65,6 +105,7 @@ export const useEvStore = create<EvState>((set, get) => ({
   login: async (email, password) => {
     const auth = await signInWithEmail(email, password);
     set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authError: "" });
+    await get().loadAuth();
   },
   loginWithGoogle: async () => {
     const auth = await signInWithGoogle();
@@ -73,10 +114,11 @@ export const useEvStore = create<EvState>((set, get) => ({
   signup: async (input) => {
     const auth = await signUpWithEmail(input);
     set({ user: auth.profile, isAuthenticated: Boolean(auth.user), authError: "" });
+    await get().loadAuth();
   },
   logout: async () => {
     await signOutUser();
-    set({ user: demoUser, isAuthenticated: false });
+    set({ user: guestUser, isAuthenticated: false, isAdmin: false });
   },
   loadStations: async () => {
     try {

@@ -2,6 +2,9 @@ import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPanel, AuthPanel, FilterPanel, PageFrame, PaymentPanel, RecommendationRail, RewardsPanel, StationsDirectory } from "@/components/ev/ControlPanels";
 import { EvMap } from "@/components/ev/EvMap";
 import { StationPanel } from "@/components/ev/StationPanel";
+import { VehiclePanel } from "@/components/ev/VehiclePanel";
+import { TravelPlanner } from "@/components/ev/TravelPlanner";
+import { AdminStationManager } from "@/components/ev/AdminStationManager";
 
 const routerBaseName = import.meta.env.BASE_URL === "./" ? "/" : import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -12,7 +15,10 @@ function HomePage() {
       <RecommendationRail />
       <div className="grid gap-5 xl:grid-cols-[1.45fr_0.85fr]">
         <EvMap />
-        <StationPanel />
+        <div className="space-y-4">
+          <StationPanel />
+          <VehiclePanel />
+        </div>
       </div>
     </PageFrame>
   );
@@ -31,8 +37,9 @@ function BookingPage() {
   return (
     <PageFrame>
       <RecommendationRail />
-      <div className="mx-auto w-full max-w-3xl">
+      <div className="mx-auto grid w-full max-w-3xl gap-4">
         <StationPanel />
+        <VehiclePanel />
       </div>
     </PageFrame>
   );
@@ -63,7 +70,8 @@ export default function App() {
         <Route path="/payment" element={<PageFrame><PaymentPanel /></PageFrame>} />
         <Route path="/payments" element={<Navigate to="/payment" replace />} />
         <Route path="/rewards" element={<PageFrame><RewardsPanel /></PageFrame>} />
-        <Route path="/admin" element={<PageFrame><AdminPanel /></PageFrame>} />
+        <Route path="/planner" element={<PageFrame><TravelPlanner /></PageFrame>} />
+        <Route path="/admin" element={<PageFrame><div className="grid gap-5"><AdminPanel /><AdminStationManager /></div></PageFrame>} />
         <Route path="/login" element={<PageFrame><AuthPanel /></PageFrame>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

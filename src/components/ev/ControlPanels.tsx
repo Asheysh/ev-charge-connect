@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Award, BarChart3, BatteryCharging, Gauge, IndianRupee, LogOut, Map, Navigation, QrCode, Search, Settings2, ShieldCheck, Sparkles, UserRound, Users, WalletCards, Zap } from "lucide-react";
+import { Award, BarChart3, BatteryCharging, Compass, Gauge, IndianRupee, LogOut, Map, Navigation, QrCode, Search, Settings2, ShieldCheck, Sparkles, UserRound, Users, WalletCards, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -15,6 +15,7 @@ export function TopBar() {
     ["/", "Map", Map],
     ["/stations", "Stations", Zap],
     ["/booking", "Queue", Users],
+    ["/planner", "Planner", Compass],
     ["/payment", "Pay", WalletCards],
     ["/rewards", "Rewards", Award],
     ["/admin", "Admin", BarChart3],
@@ -51,8 +52,8 @@ export function TopBar() {
         </nav>
         <div className="glass-panel premium-border flex items-center gap-3 rounded-2xl border px-3 py-2">
           <div className="text-right">
-            <p className="text-sm font-bold">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{isAuthenticated ? "Signed in" : "Demo mode"} · {user.coins} coins</p>
+            <p className="text-sm font-bold">{isAuthenticated ? user.name : "Guest"}</p>
+            <p className="text-xs text-muted-foreground">{isAuthenticated ? `Signed in · ${user.coins} coins` : "Browsing as guest"}</p>
           </div>
           <div className="flex size-10 items-center justify-center rounded-full bg-accent font-black text-accent-foreground">
             {user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
