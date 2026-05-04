@@ -91,7 +91,7 @@ export async function signInWithGoogle(): Promise<AuthStatePayload> {
     throw new Error("Supabase is not configured. Cannot start Google sign-in.");
   }
   const redirectTo = `${window.location.origin}/login`;
-  console.info("[auth] starting Google OAuth, redirectTo:", redirectTo);
+  console.info("[auth] starting Google OAuth", { redirectTo });
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -101,8 +101,8 @@ export async function signInWithGoogle(): Promise<AuthStatePayload> {
   });
   if (error) {
     console.error("[auth] Google OAuth error:", error);
-    if (/provider is not enabled/i.test(error.message)) {
-      throw new Error("Google sign-in isn't enabled for this Supabase project. Enable the Google provider in Authentication → Providers.");
+    if (/provider is not enabled|unsupported provider|missing oauth secret/i.test(error.message)) {
+      throw new Error("Google sign-in is not fully configured in Supabase. Please verify the Google provider has a Client ID and Client Secret, and that this app URL is allowed as a redirect URL.");
     }
     throw new Error(error.message);
   }
