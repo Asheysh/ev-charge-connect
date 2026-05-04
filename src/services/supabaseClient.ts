@@ -5,12 +5,10 @@ import { createClient } from "@supabase/supabase-js";
 const SUPABASE_URL = "https://bytfwzfcemoxybywligk.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_efLD7RGj1T1yPZuRObxDOA_lRAPoj9Y";
 
-// Allow override via Vite env vars without breaking the default.
-const url = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
-const key =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  SUPABASE_PUBLISHABLE_KEY;
+// Use the direct Supabase project first. Lovable previews inject their own
+// VITE_SUPABASE_* values, so env vars must not override this project.
+const url = SUPABASE_URL;
+const key = SUPABASE_PUBLISHABLE_KEY;
 
 export const supabaseUrl = url;
 export const supabasePublishableKey = key;
