@@ -1,17 +1,32 @@
 import { createClient } from "@supabase/supabase-js";
 
-const defaultSupabaseUrl = "https://bytfwzfcemoxybywligk.supabase.co";
-const defaultSupabasePublishableKey = "sb_publishable_efLD7RGj1T1yPZuRObxDOA_lRAPoj9Y";
+// Direct Supabase project (Google OAuth configured here).
+// Publishable / anon keys are safe to expose in the client bundle.
+const SUPABASE_URL = "https://bytfwzfcemoxybywligk.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_efLD7RGj1T1yPZuRObxDOA_lRAPoj9Y";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || defaultSupabaseUrl;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || defaultSupabasePublishableKey;
+// Allow override via Vite env vars without breaking the default.
+const url = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
+const key =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  SUPABASE_PUBLISHABLE_KEY;
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
+export const supabaseUrl = url;
+export const supabasePublishableKey = key;
+export const isSupabaseConfigured = Boolean(url && key);
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+export const supabase = createClient(url, key, {
   auth: {
-    storage: window.localStorage,
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: "pkce",
   },
 });
+
+if (typeof window !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.info("[supabase] client initialised:", url);
+}

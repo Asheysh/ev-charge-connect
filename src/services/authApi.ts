@@ -87,13 +87,30 @@ export async function signUpWithEmail(input: { email: string; password: string; 
 }
 
 export async function signInWithGoogle(): Promise<AuthStatePayload> {
-  if (!isSupabaseConfigured || !supabase) return { user: null, session: null, profile: demoUser };
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error("Supabase is not configured. Cannot start Google sign-in.");
+  }
+  const redirectTo = `${window.location.origin}/login`;
+  console.info("[auth] starting Google OAuth, redirectTo:", redirectTo);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: window.location.origin },
+    options: {
+      redirectTo,
+      queryParams: { access_type: "offline", prompt: "select_account" },
+    },
   });
-  if (error) throw new Error(error.message);
-  if (data.url) window.location.assign(data.url);
+  if (error) {
+    console.error("[auth] Google OAuth error:", error);
+    if (/provider is not enabled/i.test(error.message)) {
+      throw new Error("Google sign-in isn't enabled for this Supabase project. Enable the Google provider in Authentication → Providers.");
+    }
+    throw new Error(error.message);
+  }
+  if (data?.url) {
+    window.location.assign(data.url);
+  } else {
+    throw new Error("Supabase did not return a redirect URL for Google OAuth.");
+  }
   return { user: null, session: null, profile: demoUser };
 }
 
