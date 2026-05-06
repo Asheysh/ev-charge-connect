@@ -40,6 +40,31 @@ export interface Station {
   peak_hours?: string;
   power_kw?: number;
   image_url?: string;
+  /** When false, station is hidden from public map and search. Admins control this. */
+  active?: boolean;
+}
+
+export type ReportCategory = "not_working" | "faulty_cable" | "wrong_location" | "no_station" | "safety" | "other";
+
+export interface StationReport {
+  id: string;
+  station_id: string;
+  user_id: string;
+  user_name?: string;
+  category: ReportCategory;
+  message: string;
+  status: "open" | "resolved" | "dismissed";
+  created_at: string;
+}
+
+export type AppRole = "user" | "admin" | "super_admin";
+
+export interface UserRoleEntry {
+  id: string;
+  user_id: string;
+  email?: string;
+  name?: string;
+  role: AppRole;
 }
 
 export interface Charger {

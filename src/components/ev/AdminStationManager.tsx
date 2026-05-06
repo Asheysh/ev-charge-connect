@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Crosshair, IndianRupee, Plus, Trash2, TrendingUp, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Crosshair, Flag, IndianRupee, Plus, Power, PowerOff, Trash2, TrendingUp, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EvMap } from "@/components/ev/EvMap";
 import { useEvStore } from "@/store/evStore";
@@ -30,10 +31,13 @@ const blankStation = (): Omit<Station, "id"> => ({
 });
 
 export function AdminStationManager() {
-  const { stations, addStation, updateStation, removeStation, isAdmin } = useEvStore();
+  const { stations, addStation, updateStation, removeStation, isAdmin, toggleStationActive, reports, loadReports } = useEvStore();
   const [pickMode, setPickMode] = useState(false);
   const [draft, setDraft] = useState<Omit<Station, "id">>(blankStation);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => { void loadReports(); }, [loadReports]);
 
   if (!isAdmin) {
     return (
@@ -50,6 +54,10 @@ export function AdminStationManager() {
   }
 
   const opened = stations.find((s) => s.id === openId) ?? null;
+  const filtered = stations.filter((s) => `${s.name} ${s.city} ${s.operator ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+  const reportsForOpen = opened ? reports.filter((r) => r.station_id === opened.id) : [];
+  const dailyEnergy = (s: Station) => (s.total_slots - s.available_slots) * 24 + s.total_slots * 60;
+  const dailyRevenue = (s: Station) => Math.round(dailyEnergy(s) * s.price_per_kwh);
 
   return (
     <section className="grid gap-5 lg:grid-cols-[0.85fr_1.15fr]">
@@ -76,17 +84,29 @@ export function AdminStationManager() {
         </div>
 
         <div className="mt-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Stations · {stations.length}</p>
-          <div className="mt-2 max-h-[400px] space-y-1 overflow-y-auto">
-            {stations.map((s) => (
-              <div key={s.id} className="flex items-center justify-between rounded-xl bg-secondary p-2.5 text-sm">
-                <button className="flex-1 text-left font-semibold hover:text-primary" onClick={() => setOpenId(s.id)}>
-                  {s.name}
-                </button>
-                <span className="text-xs text-muted-foreground">{s.city}</span>
-                <Button size="icon" variant="ghost" onClick={() => removeStation(s.id)} aria-label="Delete"><Trash2 className="size-4" /></Button>
-              </div>
-            ))}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Stations · {stations.length}</p>
+            <Input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 w-40" />
+          </div>
+          <div className="mt-2 max-h-[420px] space-y-1 overflow-y-auto">
+            {filtered.map((s) => {
+              const off = s.active === false;
+              const openReports = reports.filter((r) => r.station_id === s.id && r.status === "open").length;
+              return (
+                <div key={s.id} className={`flex items-center gap-2 rounded-xl p-2.5 text-sm ${off ? "bg-destructive/10" : "bg-secondary"}`}>
+                  <button className="flex-1 text-left font-semibold hover:text-primary" onClick={() => setOpenId(s.id)}>
+                    {s.name}
+                    <span className="ml-1 text-xs text-muted-foreground">· {s.city}</span>
+                  </button>
+                  {openReports > 0 ? <span className="flex items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground"><Flag className="size-3" /> {openReports}</span> : null}
+                  <span className="flex items-center gap-1.5 text-xs">
+                    {off ? <PowerOff className="size-3.5 text-destructive" /> : <Power className="size-3.5 text-primary" />}
+                    <Switch checked={!off} onCheckedChange={(v) => void toggleStationActive(s.id, v)} aria-label="Toggle station" />
+                  </span>
+                  <Button size="icon" variant="ghost" onClick={() => removeStation(s.id)} aria-label="Delete"><Trash2 className="size-4" /></Button>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -94,18 +114,22 @@ export function AdminStationManager() {
       <EvMap pickMode={pickMode} onPickLocation={(lat, lng) => setDraft((d) => ({ ...d, lat, lng }))} />
 
       <Dialog open={!!opened} onOpenChange={(o) => !o && setOpenId(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-2xl">
           {opened ? (
             <>
               <DialogHeader>
                 <DialogTitle>{opened.name}</DialogTitle>
                 <DialogDescription>{opened.address} · {opened.city}</DialogDescription>
               </DialogHeader>
+              <div className="flex items-center justify-between rounded-xl bg-secondary p-3">
+                <span className="text-sm font-semibold">{opened.active === false ? "Station OFF — hidden from public map" : "Station LIVE — visible on map"}</span>
+                <Switch checked={opened.active !== false} onCheckedChange={(v) => void toggleStationActive(opened.id, v)} />
+              </div>
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <KPI icon={<Zap className="size-4" />} label="Reliability" value={`${opened.reliability_score}%`} />
                 <KPI icon={<IndianRupee className="size-4" />} label="Price" value={`₹${opened.price_per_kwh}/kWh`} />
-                <KPI icon={<TrendingUp className="size-4" />} label="Energy/day" value={`${opened.total_slots * 120} kWh`} />
-                <KPI icon={<TrendingUp className="size-4" />} label="Profit/day" value={`₹${Math.round(opened.total_slots * 120 * opened.price_per_kwh * 0.35).toLocaleString()}`} />
+                <KPI icon={<TrendingUp className="size-4" />} label="Energy/day" value={`${dailyEnergy(opened)} kWh`} />
+                <KPI icon={<IndianRupee className="size-4" />} label="Revenue/day" value={`₹${dailyRevenue(opened).toLocaleString()}`} />
               </div>
               <div className="grid grid-cols-2 gap-3 pt-3">
                 <label className="text-xs">Price ₹/kWh
@@ -120,6 +144,17 @@ export function AdminStationManager() {
                 <label className="text-xs">Available
                   <Input type="number" value={opened.available_slots} onChange={(e) => updateStation(opened.id, { available_slots: Number(e.target.value) })} />
                 </label>
+              </div>
+              <div className="pt-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Reports · {reportsForOpen.length}</p>
+                <div className="mt-2 max-h-44 space-y-1 overflow-y-auto">
+                  {reportsForOpen.length === 0 ? <p className="rounded-lg bg-secondary p-2 text-xs text-muted-foreground">No reports yet.</p> : reportsForOpen.map((r) => (
+                    <div key={r.id} className="rounded-lg bg-secondary p-2 text-xs">
+                      <p className="font-semibold capitalize">{r.category.replaceAll("_", " ")} <span className="text-muted-foreground">· {r.status}</span></p>
+                      {r.message ? <p className="mt-0.5 text-muted-foreground">{r.message}</p> : null}
+                    </div>
+                  ))}
+                </div>
               </div>
             </>
           ) : null}

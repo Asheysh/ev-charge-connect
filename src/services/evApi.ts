@@ -1,4 +1,4 @@
-import type { QueueEntry, Station, Transaction, Verification } from "@/types/ev";
+import type { QueueEntry, Station, StationReport, Transaction, UserRoleEntry, Verification, AppRole } from "@/types/ev";
 import { queueEntries, stations, verifications } from "./seedData";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
@@ -83,3 +83,51 @@ export function subscribeToStationQueue(stationId: string, onChange: () => void)
 }
 
 export const demoVerifications = verifications;
+
+/* ===== Reports ===== */
+export async function fetchStationReports(stationId?: string): Promise<StationReport[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  let q = supabase.from("station_reports").select("*").order("created_at", { ascending: false });
+  if (stationId && isUuid(stationId)) q = q.eq("station_id", stationId);
+  const { data, error } = await q;
+  if (error) throw new Error(`Failed to load reports: ${error.message}`);
+  return (data as StationReport[]) ?? [];
+}
+
+export async function submitStationReport(input: Omit<StationReport, "id" | "created_at" | "status">): Promise<StationReport> {
+  const local: StationReport = { ...input, id: crypto.randomUUID(), status: "open", created_at: new Date().toISOString() };
+  if (!isSupabaseConfigured || !supabase || !isUuid(input.station_id) || !isUuid(input.user_id)) return local;
+  const { data, error } = await supabase.from("station_reports").insert(local).select().single();
+  if (error) throw new Error(`Failed to submit report: ${error.message}`);
+  return data as StationReport;
+}
+
+/* ===== Admin: stations ===== */
+export async function setStationActive(id: string, active: boolean): Promise<void> {
+  if (!isSupabaseConfigured || !supabase || !isUuid(id)) return;
+  const { error } = await supabase.from("stations").update({ active }).eq("id", id);
+  if (error) throw new Error(`Failed to toggle station: ${error.message}`);
+}
+
+export async function patchStation(id: string, patch: Partial<Station>): Promise<void> {
+  if (!isSupabaseConfigured || !supabase || !isUuid(id)) return;
+  const { error } = await supabase.from("stations").update(patch).eq("id", id);
+  if (error) throw new Error(`Failed to update station: ${error.message}`);
+}
+
+/* ===== Admin: roles (super-admin) ===== */
+export async function fetchAllRoles(): Promise<UserRoleEntry[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase.from("user_roles").select("id, user_id, role");
+  if (error) throw new Error(`Failed to load roles: ${error.message}`);
+  return ((data ?? []) as Array<{ id: string; user_id: string; role: AppRole }>).map((r) => ({ ...r }));
+}
+
+export async function setUserRole(userId: string, role: AppRole): Promise<void> {
+  if (!isSupabaseConfigured || !supabase || !isUuid(userId)) return;
+  // Replace existing role for the user with the new one.
+  const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
+  if (delErr) throw new Error(delErr.message);
+  const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+  if (error) throw new Error(`Failed to set role: ${error.message}`);
+}

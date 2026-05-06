@@ -2,20 +2,31 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents 
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
 import type { Station } from "@/types/ev";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { fetchRoute } from "@/lib/geo";
+import { fetchRoute, haversineKm, type RouteResult } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
+import { StationDetailDialog } from "@/components/ev/StationDetailDialog";
+
+/** How many of the nearest stations to draw secondary (grey) routes for. */
+const NEAR_ROUTES_COUNT = 4;
 
 const stationIcon = new L.DivIcon({
   html: '<div class="ev-marker"><span></span></div>',
   className: "ev-marker-shell",
   iconSize: [34, 34],
   iconAnchor: [17, 17],
+});
+
+const stationIconActive = new L.DivIcon({
+  html: '<div class="ev-marker ev-marker-active"><span></span></div>',
+  className: "ev-marker-shell",
+  iconSize: [40, 40],
+  iconAnchor: [20, 20],
 });
 
 const liveIcon = new L.DivIcon({
@@ -25,70 +36,87 @@ const liveIcon = new L.DivIcon({
   iconAnchor: [9, 9],
 });
 
-function StationPopup({ station }: { station: Station }) {
-  const setSelectedStation = useEvStore((state) => state.setSelectedStation);
-
-  return (
-    <div className="w-64 space-y-3 p-1 font-sans text-foreground">
-      <div>
-        <p className="text-sm font-bold">{station.name}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{station.address}</p>
-      </div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <span className="rounded-md bg-secondary px-2 py-1">{station.available_slots}/{station.total_slots} slots</span>
-        <span className="rounded-md bg-secondary px-2 py-1">₹{station.price_per_kwh}/kWh</span>
-        <span className="rounded-md bg-secondary px-2 py-1">{station.reliability_score}%</span>
-      </div>
-      <button
-        className="w-full rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-        onClick={() => setSelectedStation(station.id)}
-      >
-        Select station
-      </button>
-    </div>
-  );
-}
-
 function MapClickCapture({ onPick }: { onPick: (lat: number, lng: number) => void }) {
   useMapEvents({ click: (e) => onPick(e.latlng.lat, e.latlng.lng) });
   return null;
 }
 
-function FlyTo({ position }: { position: [number, number] | null }) {
+/** Imperative recenter helper exposed via a hook component. */
+function FlyController({ trigger, position }: { trigger: number; position: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
-    if (position) map.flyTo(position, Math.max(map.getZoom(), 13), { duration: 0.8 });
-  }, [position, map]);
+    if (trigger > 0 && position) map.flyTo(position, Math.max(map.getZoom(), 14), { duration: 0.7 });
+  }, [trigger, position, map]);
   return null;
 }
 
 interface EvMapClientProps {
-  /** When true, clicking the map calls onPickLocation instead of selecting a station. */
   pickMode?: boolean;
   onPickLocation?: (lat: number, lng: number) => void;
 }
 
 export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapClientProps) {
-  const filteredStations = useFilteredStations();
+  const filtered = useFilteredStations();
+  const allStations = useEvStore((s) => s.stations);
   const selectedStationId = useEvStore((state) => state.selectedStationId);
   const setSelectedStation = useEvStore((state) => state.setSelectedStation);
-  const stations = useEvStore((s) => s.stations);
   const liveLocation = useEvStore((s) => s.liveLocation);
   const setLiveLocation = useEvStore((s) => s.setLiveLocation);
   const activeRoute = useEvStore((s) => s.activeRoute);
   const setActiveRoute = useEvStore((s) => s.setActiveRoute);
   const geo = useGeolocation(true);
 
+  // Visible stations: only those marked active (or undefined for legacy seed data) and matching filters.
+  const stations = useMemo(() => filtered.filter((s) => s.active !== false), [filtered]);
+
+  const [recenter, setRecenter] = useState(0);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [nearbyRoutes, setNearbyRoutes] = useState<{ stationId: string; route: RouteResult }[]>([]);
+
   useEffect(() => {
     if (geo.coords) setLiveLocation(geo.coords);
   }, [geo.coords, setLiveLocation]);
 
-  const selected = useMemo(() => stations.find((s) => s.id === selectedStationId), [stations, selectedStationId]);
+  // Nearest stations to the user, used for grey alternate routes.
+  const nearest = useMemo(() => {
+    if (!liveLocation) return [];
+    return [...stations]
+      .map((s) => ({ s, d: haversineKm(liveLocation, { lat: s.lat, lng: s.lng }) }))
+      .sort((a, b) => a.d - b.d)
+      .slice(0, NEAR_ROUTES_COUNT)
+      .map((x) => x.s);
+  }, [stations, liveLocation]);
 
-  async function routeToSelected() {
-    if (!liveLocation || !selected) return;
-    const r = await fetchRoute(liveLocation, { lat: selected.lat, lng: selected.lng });
-    setActiveRoute(r);
+  const selected = useMemo(() => allStations.find((s) => s.id === selectedStationId), [allStations, selectedStationId]);
+
+  /** Build "ChargeGrid" overlay: nearest station route in green + alternates in grey. */
+  async function showChargegridRoutes() {
+    if (!liveLocation || nearest.length === 0) return;
+    const results = await Promise.all(nearest.map((s) => fetchRoute(liveLocation, { lat: s.lat, lng: s.lng })));
+    const collected = nearest
+      .map((s, i) => (results[i] ? { stationId: s.id, route: results[i]! } : null))
+      .filter((x): x is { stationId: string; route: RouteResult } => Boolean(x));
+    setNearbyRoutes(collected);
+    if (collected[0]) {
+      setSelectedStation(collected[0].stationId);
+      setActiveRoute(collected[0].route);
+    }
+  }
+
+  async function routeToStation(station: Station) {
+    if (!liveLocation) return;
+    const r = await fetchRoute(liveLocation, { lat: station.lat, lng: station.lng });
+    if (r) {
+      setActiveRoute(r);
+      setSelectedStation(station.id);
+    }
+  }
+
+  function openDetail(stationId: string) {
+    setSelectedStation(stationId);
+    setDetailId(stationId);
+    setDetailOpen(true);
   }
 
   return (
@@ -99,78 +127,126 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {pickMode && onPickLocation ? <MapClickCapture onPick={onPickLocation} /> : null}
+
+        {/* Imperative recenter (manual button only — no auto-fly on geo updates) */}
+        <FlyController trigger={recenter} position={liveLocation ? [liveLocation.lat, liveLocation.lng] : null} />
+
         {liveLocation ? (
-          <>
-            <Marker position={[liveLocation.lat, liveLocation.lng]} icon={liveIcon}>
-              <Popup>You are here</Popup>
-            </Marker>
-            <FlyTo position={[liveLocation.lat, liveLocation.lng]} />
-          </>
+          <Marker position={[liveLocation.lat, liveLocation.lng]} icon={liveIcon}>
+            <Popup>You are here</Popup>
+          </Marker>
         ) : null}
-        {activeRoute ? (
-          <Polyline positions={activeRoute.geometry} pathOptions={{ color: "oklch(0.65 0.2 200)", weight: 5, opacity: 0.85 }} />
+
+        {/* Grey alternate routes — clickable to switch primary station */}
+        {nearbyRoutes.map(({ stationId, route }) => {
+          const isPrimary = stationId === selectedStationId;
+          return (
+            <Polyline
+              key={stationId}
+              positions={route.geometry}
+              pathOptions={{
+                color: isPrimary ? "oklch(0.65 0.2 162)" : "oklch(0.7 0.02 230)",
+                weight: isPrimary ? 6 : 4,
+                opacity: isPrimary ? 0.95 : 0.55,
+                dashArray: isPrimary ? undefined : "6 8",
+              }}
+              eventHandlers={{
+                click: () => {
+                  setSelectedStation(stationId);
+                  setActiveRoute(route);
+                },
+              }}
+            />
+          );
+        })}
+
+        {/* Single explicit route (e.g. Navigate from detail dialog) */}
+        {activeRoute && nearbyRoutes.length === 0 ? (
+          <Polyline positions={activeRoute.geometry} pathOptions={{ color: "oklch(0.65 0.2 162)", weight: 6, opacity: 0.95 }} />
         ) : null}
+
         <MarkerClusterGroup chunkedLoading>
-          {filteredStations.map((station) => (
+          {stations.map((station) => (
             <Marker
               key={station.id}
               position={[station.lat, station.lng]}
-              icon={stationIcon}
-              eventHandlers={{ click: () => setSelectedStation(station.id) }}
-            >
-              <Popup>
-                <StationPopup station={station} />
-              </Popup>
-            </Marker>
+              icon={selectedStationId === station.id ? stationIconActive : stationIcon}
+              eventHandlers={{ click: () => openDetail(station.id) }}
+            />
           ))}
         </MarkerClusterGroup>
       </MapContainer>
 
-      <div className="glass-panel premium-border pointer-events-none absolute left-4 top-4 z-[500] rounded-2xl border p-3">
+      {/* Top-left brand chip */}
+      <div className="glass-panel premium-border pointer-events-none absolute left-3 top-3 z-[500] rounded-2xl border p-2.5 sm:left-4 sm:top-4 sm:p-3">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <MapPin className="size-4 text-primary" /> NCR charging grid
+          <MapPin className="size-4 text-primary" /> Charging grid
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><BatteryCharging className="size-3" /> {filteredStations.length}</span>
+        <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1"><BatteryCharging className="size-3" /> {stations.length}</span>
           <span className="flex items-center gap-1"><Clock className="size-3" /> live</span>
           <span className="flex items-center gap-1"><IndianRupee className="size-3" /> UPI</span>
         </div>
       </div>
 
-      <div className="absolute right-4 top-4 z-[500] flex flex-col gap-2">
-        <Button size="sm" variant="hero" onClick={geo.request} className="shadow-glow">
-          <LocateFixed className="size-4" /> {geo.loading ? "Locating…" : liveLocation ? "Recenter" : "My location"}
+      {/* Right-side floating action stack — Maps-app style */}
+      <div className="absolute right-3 top-3 z-[500] flex flex-col gap-2 sm:right-4 sm:top-4">
+        <Button size="icon" variant="hero" aria-label="Recenter to my location" className="size-12 rounded-full shadow-glow" onClick={() => { geo.request(); setRecenter((n) => n + 1); }}>
+          <LocateFixed className="size-5" />
+        </Button>
+        <Button size="icon" variant="secondary" aria-label="Show ChargeGrid routes" className="size-12 rounded-full" onClick={() => void showChargegridRoutes()} disabled={!liveLocation}>
+          <Zap className="size-5" />
         </Button>
         {liveLocation && selected ? (
-          <Button size="sm" variant="secondary" onClick={() => void routeToSelected()}>
-            <Navigation className="size-4" /> Route to {selected.name.split(" ")[0]}
+          <Button size="icon" variant="outline" aria-label="Route to selected" className="size-12 rounded-full" onClick={() => void routeToStation(selected)}>
+            <Navigation className="size-5" />
           </Button>
         ) : null}
-        {activeRoute ? (
-          <span className="rounded-xl bg-card/90 px-3 py-1.5 text-xs font-semibold shadow-card">
-            {activeRoute.distanceKm.toFixed(1)} km · {Math.round(activeRoute.durationMin)} min
-          </span>
-        ) : null}
-        {geo.error ? <span className="rounded-xl bg-destructive/10 px-3 py-1.5 text-xs text-destructive">{geo.error}</span> : null}
-        {pickMode ? (
-          <span className="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-glow">
-            <Crosshair className="mr-1 inline size-3" /> Click map to drop pin
-          </span>
+        {nearbyRoutes.length > 0 ? (
+          <Button size="sm" variant="ghost" className="rounded-full bg-card/80 px-3 backdrop-blur" onClick={() => { setNearbyRoutes([]); setActiveRoute(null); }}>
+            Clear routes
+          </Button>
         ) : null}
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 right-4 z-[500] flex flex-wrap gap-2">
-        {filteredStations.slice(0, 3).map((station) => (
-          <div
-            key={station.id}
-            className={`rounded-2xl border px-3 py-2 text-xs shadow-card backdrop-blur-xl transition ${
-              selectedStationId === station.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card/90"
-            }`}
-          >
-            {station.name.split(" ").slice(0, 2).join(" ")} · {station.available_slots} free · {station.wait_minutes}m
-          </div>
-        ))}
+      {/* Bottom info / status */}
+      <div className="absolute bottom-3 left-3 right-3 z-[500] flex flex-wrap items-end justify-between gap-2 sm:bottom-4 sm:left-4 sm:right-4">
+        <div className="flex flex-wrap gap-1.5">
+          {activeRoute ? (
+            <span className="rounded-full bg-card/90 px-3 py-1.5 text-xs font-semibold shadow-card backdrop-blur">
+              {activeRoute.distanceKm.toFixed(1)} km · {Math.round(activeRoute.durationMin)} min
+            </span>
+          ) : null}
+          {pickMode ? (
+            <span className="rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-glow">
+              <Crosshair className="mr-1 inline size-3" /> Tap map to drop pin
+            </span>
+          ) : null}
+          {geo.error ? <span className="rounded-full bg-destructive/10 px-3 py-1.5 text-xs text-destructive">{geo.error}</span> : null}
+        </div>
+        {/* Mobile bottom-sheet style strip of nearest stations */}
+        <div className="pointer-events-auto flex max-w-full flex-1 gap-2 overflow-x-auto pb-1 sm:flex-none">
+          {stations.slice(0, 6).map((station) => (
+            <button
+              key={station.id}
+              onClick={() => openDetail(station.id)}
+              className={`shrink-0 rounded-2xl border px-3 py-2 text-left text-xs shadow-card backdrop-blur-xl transition ${
+                selectedStationId === station.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card/90 hover:border-primary"
+              }`}
+            >
+              <p className="font-bold">{station.name.split(" ").slice(0, 3).join(" ")}</p>
+              <p className="opacity-80">{station.available_slots} free · {station.wait_minutes}m · ₹{station.price_per_kwh}</p>
+            </button>
+          ))}
+        </div>
       </div>
+
+      <StationDetailDialog
+        stationId={detailId}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onRoute={(s) => { setDetailOpen(false); void routeToStation(s); }}
+      />
     </div>
   );
 }

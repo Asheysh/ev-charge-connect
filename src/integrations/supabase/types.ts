@@ -211,8 +211,39 @@ export type Database = {
           },
         ]
       }
+      station_reports: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          message: string
+          station_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          station_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          message?: string
+          station_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       stations: {
         Row: {
+          active: boolean
           address: string
           amenities: string[]
           available_slots: number
@@ -237,6 +268,7 @@ export type Database = {
           wait_minutes: number
         }
         Insert: {
+          active?: boolean
           address: string
           amenities?: string[]
           available_slots?: number
@@ -261,6 +293,7 @@ export type Database = {
           wait_minutes?: number
         }
         Update: {
+          active?: boolean
           address?: string
           amenities?: string[]
           available_slots?: number
@@ -394,9 +427,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "operator" | "user"
+      app_role: "admin" | "operator" | "user" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -524,7 +558,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operator", "user"],
+      app_role: ["admin", "operator", "user", "super_admin"],
     },
   },
 } as const
