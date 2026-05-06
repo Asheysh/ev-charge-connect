@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Award, BarChart3, BatteryCharging, Compass, Gauge, IndianRupee, LogOut, Map, Navigation, QrCode, Search, Settings2, ShieldCheck, Sparkles, UserRound, Users, WalletCards, Zap } from "lucide-react";
+import { Award, BarChart3, BatteryCharging, Compass, Crown, Flag, Gauge, IndianRupee, LogOut, Map, Navigation, QrCode, Search, Settings2, ShieldCheck, Sparkles, UserRound, Users, WalletCards, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
@@ -261,28 +262,41 @@ export function RewardsPanel() {
 }
 
 export function AdminPanel() {
-  const stations = useEvStore((state) => state.stations);
+  const { stations, toggleStationActive, reports, loadReports, isSuperAdmin } = useEvStore();
+  useEffect(() => { void loadReports(); }, [loadReports]);
   const activeSessions = stations.reduce((sum, station) => sum + (station.total_slots - station.available_slots), 0);
   const averageReliability = stations.length > 0 ? Math.round(stations.reduce((s, x) => s + x.reliability_score, 0) / stations.length) : 0;
+  const offline = stations.filter((s) => s.active === false).length;
   return (
     <section className="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
       <div className="glass-panel premium-border rounded-3xl border p-6">
-        <h2 className="text-2xl font-black">Admin command centre</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-black">Admin command centre</h2>
+          {isSuperAdmin ? <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-bold text-amber-600"><Crown className="size-3.5" /> Super-admin</span> : null}
+        </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Metric label="Stations" value={stations.length.toString()} icon={<Zap />} />
           <Metric label="Active slots" value={activeSessions.toString()} icon={<Gauge />} />
           <Metric label="Avg reliability" value={`${averageReliability}%`} icon={<ShieldCheck />} />
-          <Metric label="Revenue today" value="₹28.7k" icon={<IndianRupee />} />
+          <Metric label="Offline stations" value={offline.toString()} icon={<Flag />} />
         </div>
       </div>
       <div className="glass-panel premium-border rounded-3xl border p-6">
         <div className="flex items-center gap-2"><Search className="size-5 text-primary" /><Input placeholder="Search stations, charger IDs, operators" /></div>
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
-          {stations.map((station) => (
-            <div key={station.id} className="grid gap-3 border-b border-border p-3 text-sm last:border-0 md:grid-cols-5">
-              <span className="font-semibold">{station.name}</span><span>{station.city}</span><span>{station.charger_type}</span><span>{station.available_slots}/{station.total_slots} free</span><span>₹{station.price_per_kwh}/kWh</span>
-            </div>
-          ))}
+          {stations.map((station) => {
+            const r = reports.filter((x) => x.station_id === station.id && x.status === "open").length;
+            return (
+              <div key={station.id} className="grid gap-3 border-b border-border p-3 text-sm last:border-0 md:grid-cols-[1.4fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]">
+                <span className="font-semibold">{station.name}</span>
+                <span>{station.city}</span>
+                <span>{station.charger_type}</span>
+                <span>{station.available_slots}/{station.total_slots} free</span>
+                <span className="flex items-center gap-1">{r > 0 ? <span className="rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground"><Flag className="mr-1 inline size-2.5" />{r}</span> : <span className="text-muted-foreground">—</span>}</span>
+                <Switch checked={station.active !== false} onCheckedChange={(v) => void toggleStationActive(station.id, v)} aria-label="Toggle active" />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
