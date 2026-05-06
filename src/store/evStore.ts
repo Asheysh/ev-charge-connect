@@ -159,7 +159,7 @@ export const useEvStore = create<EvState>((set, get) => ({
   },
   logout: async () => {
     await signOutUser();
-    set({ user: guestUser, isAuthenticated: false, isAdmin: false });
+    set({ user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false });
   },
   loadStations: async () => {
     try {
