@@ -5,6 +5,7 @@ import { StationPanel } from "@/components/ev/StationPanel";
 import { VehiclePanel } from "@/components/ev/VehiclePanel";
 import { TravelPlanner } from "@/components/ev/TravelPlanner";
 import { AdminStationManager } from "@/components/ev/AdminStationManager";
+import { SuperAdminPanel } from "@/components/ev/SuperAdminPanel";
 
 const routerBaseName = import.meta.env.BASE_URL === "./" ? "/" : import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -71,7 +72,7 @@ export default function App() {
         <Route path="/payments" element={<Navigate to="/payment" replace />} />
         <Route path="/rewards" element={<PageFrame><RewardsPanel /></PageFrame>} />
         <Route path="/planner" element={<PageFrame><TravelPlanner /></PageFrame>} />
-        <Route path="/admin" element={<PageFrame><div className="grid gap-5"><AdminPanel /><AdminStationManager /></div></PageFrame>} />
+        <Route path="/admin" element={<PageFrame><div className="grid gap-5"><AdminPanel /><AdminStationManager /><SuperAdminPanel /></div></PageFrame>} />
         <Route path="/login" element={<PageFrame><AuthPanel /></PageFrame>} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
