@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Award, BarChart3, BatteryCharging, Compass, Crown, Flag, Gauge, IndianRupee, LogOut, Map, Navigation, QrCode, Search, Settings2, ShieldCheck, Sparkles, UserRound, Users, WalletCards, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,20 +8,33 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
+import { DEMO_ACCOUNTS } from "@/lib/roles";
 
 export function TopBar() {
-  const { user, isAuthenticated, logout } = useEvStore();
+  const { user, isAuthenticated, isAdmin, isSuperAdmin, guestMode, logout } = useEvStore();
   const { pathname } = useLocation();
-  const tabs = [
-    ["/", "Map", Map],
-    ["/stations", "Stations", Zap],
-    ["/booking", "Queue", Users],
-    ["/planner", "Planner", Compass],
-    ["/payment", "Pay", WalletCards],
-    ["/rewards", "Rewards", Award],
-    ["/admin", "Admin", BarChart3],
-    ["/login", "Login", UserRound],
-  ] as const;
+  // Build the nav based on the visitor's role.
+  // - guest: map, stations, planner, login
+  // - normal user (signed in): full app minus admin & login
+  // - station manager / admin: full app + admin, no login
+  // - super-admin: same as admin (master controls live inside /admin)
+  type Tab = readonly [string, string, typeof Map];
+  const all: Record<string, Tab> = {
+    map: ["/", "Map", Map],
+    stations: ["/stations", "Stations", Zap],
+    queue: ["/booking", "Queue", Users],
+    planner: ["/planner", "Planner", Compass],
+    pay: ["/payment", "Pay", WalletCards],
+    rewards: ["/rewards", "Rewards", Award],
+    admin: ["/admin", "Admin", BarChart3],
+    login: ["/login", "Login", UserRound],
+  };
+  const tabs: Tab[] = (() => {
+    if (guestMode && !isAuthenticated) return [all.map, all.stations, all.planner, all.login];
+    if (isAdmin || isSuperAdmin) return [all.map, all.stations, all.queue, all.planner, all.pay, all.rewards, all.admin];
+    if (isAuthenticated) return [all.map, all.stations, all.queue, all.planner, all.pay, all.rewards];
+    return [all.login];
+  })();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/82 backdrop-blur-2xl">
@@ -53,13 +66,15 @@ export function TopBar() {
         </nav>
         <div className="glass-panel premium-border flex items-center gap-3 rounded-2xl border px-3 py-2">
           <div className="text-right">
-            <p className="text-sm font-bold">{isAuthenticated ? user.name : "Guest"}</p>
-            <p className="text-xs text-muted-foreground">{isAuthenticated ? `Signed in · ${user.coins} coins` : "Browsing as guest"}</p>
+            <p className="text-sm font-bold">{isAuthenticated ? user.name : guestMode ? "Guest" : "—"}</p>
+            <p className="text-xs text-muted-foreground">
+              {isSuperAdmin ? "Main admin" : isAdmin ? "Station manager" : isAuthenticated ? `Signed in · ${user.coins} coins` : guestMode ? "Browsing as guest" : "Not signed in"}
+            </p>
           </div>
           <div className="flex size-10 items-center justify-center rounded-full bg-accent font-black text-accent-foreground">
             {user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
           </div>
-          {isAuthenticated ? <Button size="icon" variant="ghost" onClick={() => void logout()} aria-label="Sign out"><LogOut /></Button> : null}
+          {(isAuthenticated || guestMode) ? <Button size="icon" variant="ghost" onClick={() => void logout()} aria-label="Sign out"><LogOut /></Button> : null}
         </div>
       </div>
     </header>
@@ -304,7 +319,8 @@ export function AdminPanel() {
 }
 
 export function AuthPanel() {
-  const { login, loginWithGoogle, signup, authError, isAuthenticated, user, logout } = useEvStore();
+  const { login, loginWithGoogle, signup, authError, isAuthenticated, user, logout, enterGuestMode } = useEvStore();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -317,6 +333,7 @@ export function AuthPanel() {
     try {
       if (mode === "login") await login(form.email, form.password);
       else await signup(form);
+      navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -336,6 +353,18 @@ export function AuthPanel() {
     }
   }
 
+  async function quickDemo(email: string, password: string) {
+    setLoading(true); setError("");
+    try { await login(email, password); navigate("/"); }
+    catch (err) { setError(err instanceof Error ? err.message : "Demo sign-in failed. Make sure the account is created in Supabase Auth."); }
+    finally { setLoading(false); }
+  }
+
+  function continueAsGuest() {
+    enterGuestMode();
+    navigate("/");
+  }
+
   if (isAuthenticated) {
     return (
       <section className="glass-panel premium-border mx-auto w-full max-w-2xl rounded-3xl border p-6">
@@ -351,13 +380,16 @@ export function AuthPanel() {
     <section className="glass-panel premium-border mx-auto w-full max-w-2xl rounded-3xl border p-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Supabase Auth</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">Sign in to continue</p>
           <h2 className="text-2xl font-black">{mode === "login" ? "Login" : "Create driver profile"}</h2>
         </div>
         <Button variant="secondary" onClick={() => setMode(mode === "login" ? "signup" : "login")}>{mode === "login" ? "Sign up" : "Login"}</Button>
       </div>
       <Button className="mt-6 w-full" type="button" variant="outline" disabled={loading} onClick={() => void handleGoogleLogin()}>
         <UserRound className="size-4" /> Continue with Google
+      </Button>
+      <Button className="mt-2 w-full" type="button" variant="ghost" disabled={loading} onClick={continueAsGuest}>
+        Continue as guest (limited access)
       </Button>
       <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
         <span className="h-px flex-1 bg-border" /> Email <span className="h-px flex-1 bg-border" />
@@ -375,6 +407,18 @@ export function AuthPanel() {
         {(error || authError) ? <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{error || authError}</p> : null}
         <Button type="submit" variant="hero" disabled={loading}>{loading ? "Please wait" : mode === "login" ? "Login" : "Create account"}</Button>
       </form>
+
+      <div className="mt-6 rounded-2xl border border-dashed border-border/70 p-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Demo accounts</p>
+        <p className="mt-1 text-xs text-muted-foreground">Quick-fill the seeded admin / station-manager credentials. Accounts must exist in Supabase Auth (see DOCS.md).</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {DEMO_ACCOUNTS.map((acc) => (
+            <Button key={acc.email} type="button" size="sm" variant="secondary" disabled={loading} onClick={() => void quickDemo(acc.email, acc.password)}>
+              {acc.role === "super_admin" ? <Crown className="size-3.5" /> : <ShieldCheck className="size-3.5" />} {acc.label}
+            </Button>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
