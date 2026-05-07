@@ -5,6 +5,7 @@ import { createUpiTransaction, fetchAllRoles, fetchQueue, fetchStationReports, f
 import { getCurrentAuth, signInWithEmail, signInWithGoogle, signOutUser, signUpWithEmail } from "@/services/authApi";
 import type { LatLng, RouteResult } from "@/lib/geo";
 import { isSupabaseConfigured, supabase } from "@/services/supabaseClient";
+import { roleFromEmail } from "@/lib/roles";
 
 export const guestUser: UserProfile = {
   ...demoUser,
@@ -21,6 +22,10 @@ interface EvState {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  /** True when the visitor explicitly chose "Continue as guest". */
+  guestMode: boolean;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
   stations: Station[];
   selectedStationId: string;
   filters: StationFilters;
@@ -75,6 +80,9 @@ export const useEvStore = create<EvState>((set, get) => ({
   isAuthenticated: false,
   isAdmin: false,
   isSuperAdmin: false,
+  guestMode: false,
+  enterGuestMode: () => set({ guestMode: true, user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false }),
+  exitGuestMode: () => set({ guestMode: false }),
   stations: seedStations,
   selectedStationId: seedStations[0].id,
   filters: defaultFilters,
@@ -131,11 +139,16 @@ export const useEvStore = create<EvState>((set, get) => ({
         isSuperAdmin = roles.includes("super_admin");
         isAdmin = isSuperAdmin || roles.includes("admin");
       }
+      // Fallback: email-based role inference for the seeded demo accounts.
+      const inferred = roleFromEmail(auth.user?.email ?? null);
+      if (inferred === "super_admin") { isSuperAdmin = true; isAdmin = true; }
+      else if (inferred === "admin") { isAdmin = true; }
       set({
         user: isAuthenticated ? auth.profile : guestUser,
         isAuthenticated,
         isAdmin,
         isSuperAdmin,
+        guestMode: false,
         authReady: true,
         authError: "",
       });
@@ -159,7 +172,7 @@ export const useEvStore = create<EvState>((set, get) => ({
   },
   logout: async () => {
     await signOutUser();
-    set({ user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false });
+    set({ user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false, guestMode: false });
   },
   loadStations: async () => {
     try {
