@@ -3,7 +3,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation, Zap } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
 import type { Station } from "@/types/ev";
@@ -41,12 +41,21 @@ function MapClickCapture({ onPick }: { onPick: (lat: number, lng: number) => voi
   return null;
 }
 
-/** Imperative recenter helper exposed via a hook component. */
-function FlyController({ trigger, position }: { trigger: number; position: [number, number] | null }) {
+/**
+ * Imperative recenter helper. IMPORTANT: only fly when `trigger` changes
+ * (i.e. user pressed the recenter button). Listening on `position` would
+ * re-fly the map every time the geolocation watcher emits a new fix, which
+ * makes selecting a station / clicking on the map snap back to the user.
+ */
+function FlyController({ trigger, getPosition }: { trigger: number; getPosition: () => [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
-    if (trigger > 0 && position) map.flyTo(position, Math.max(map.getZoom(), 14), { duration: 0.7 });
-  }, [trigger, position, map]);
+    if (trigger <= 0) return;
+    const p = getPosition();
+    if (p) map.flyTo(p, Math.max(map.getZoom(), 14), { duration: 0.7 });
+    // intentionally exclude getPosition / map from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger]);
   return null;
 }
 
@@ -73,6 +82,8 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [nearbyRoutes, setNearbyRoutes] = useState<{ stationId: string; route: RouteResult }[]>([]);
+  const liveRef = useRef<LatLng | null>(null);
+  liveRef.current = liveLocation;
 
   useEffect(() => {
     if (geo.coords) setLiveLocation(geo.coords);
@@ -129,7 +140,7 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
         {pickMode && onPickLocation ? <MapClickCapture onPick={onPickLocation} /> : null}
 
         {/* Imperative recenter (manual button only — no auto-fly on geo updates) */}
-        <FlyController trigger={recenter} position={liveLocation ? [liveLocation.lat, liveLocation.lng] : null} />
+        <FlyController trigger={recenter} getPosition={() => (liveRef.current ? [liveRef.current.lat, liveRef.current.lng] : null)} />
 
         {liveLocation ? (
           <Marker position={[liveLocation.lat, liveLocation.lng]} icon={liveIcon}>
@@ -194,7 +205,17 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
         <Button size="icon" variant="hero" aria-label="Recenter to my location" className="size-12 rounded-full shadow-glow" onClick={() => { geo.request(); setRecenter((n) => n + 1); }}>
           <LocateFixed className="size-5" />
         </Button>
-        <Button size="icon" variant="secondary" aria-label="Show ChargeGrid routes" className="size-12 rounded-full" onClick={() => void showChargegridRoutes()} disabled={!liveLocation}>
+        <Button
+          size="icon"
+          variant="secondary"
+          aria-label="Show ChargeGrid routes to nearest stations"
+          title="ChargeGrid: route to nearest stations"
+          className="size-12 rounded-full"
+          onClick={() => {
+            if (!liveLocation) { geo.request(); return; }
+            void showChargegridRoutes();
+          }}
+        >
           <Zap className="size-5" />
         </Button>
         {liveLocation && selected ? (

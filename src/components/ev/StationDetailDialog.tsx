@@ -61,7 +61,7 @@ export function StationDetailDialog({ stationId, open, onOpenChange, onRoute }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="z-[2000] max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground"><Zap className="size-4" /></span>
