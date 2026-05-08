@@ -89,6 +89,14 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
     if (geo.coords) setLiveLocation(geo.coords);
   }, [geo.coords, setLiveLocation]);
 
+  // Pull live charging stations from Open Charge Map whenever the user's
+  // location changes meaningfully (or first becomes known).
+  const loadStationsNear = useEvStore((s) => s.loadStationsNear);
+  useEffect(() => {
+    if (!liveLocation) return;
+    void loadStationsNear(liveLocation.lat, liveLocation.lng, 25);
+  }, [liveLocation?.lat, liveLocation?.lng, loadStationsNear]);
+
   // Nearest stations to the user, used for grey alternate routes.
   const nearest = useMemo(() => {
     if (!liveLocation) return [];
