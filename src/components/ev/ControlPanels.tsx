@@ -27,14 +27,13 @@ export function TopBar() {
     pay: ["/payment", "Pay", WalletCards],
     rewards: ["/rewards", "Rewards", Award],
     admin: ["/admin", "Admin", BarChart3],
-    login: ["/login", "Login", UserRound],
   };
   const tabs: Tab[] = (() => {
-    if (guestMode && !isAuthenticated) return [all.map, all.stations, all.planner, all.login];
     if (isAdmin || isSuperAdmin) return [all.map, all.stations, all.queue, all.planner, all.pay, all.rewards, all.admin];
-    if (isAuthenticated) return [all.map, all.stations, all.queue, all.planner, all.pay, all.rewards];
-    return [all.login];
+    // Default (guest or signed-in user): full nav, no Login button in the bar.
+    return [all.map, all.stations, all.queue, all.planner, all.pay, all.rewards];
   })();
+  void guestMode;
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/82 backdrop-blur-2xl">
