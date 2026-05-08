@@ -2,7 +2,7 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents 
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation, Zap } from "lucide-react";
+import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation, RefreshCw, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
@@ -82,6 +82,8 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [nearbyRoutes, setNearbyRoutes] = useState<{ stationId: string; route: RouteResult }[]>([]);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const liveRef = useRef<LatLng | null>(null);
   liveRef.current = liveLocation;
 
@@ -90,12 +92,29 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
   }, [geo.coords, setLiveLocation]);
 
   // Pull live charging stations from Open Charge Map whenever the user's
-  // location changes meaningfully (or first becomes known).
+  // location changes meaningfully (or first becomes known) and refresh on
+  // an interval so availability stays current. See DOCS.md › Live Data.
   const loadStationsNear = useEvStore((s) => s.loadStationsNear);
+  const refreshLive = async () => {
+    const pos = liveRef.current;
+    if (!pos) return;
+    setSyncing(true);
+    try {
+      await loadStationsNear(pos.lat, pos.lng, 25);
+      setLastSync(new Date());
+    } catch (err) {
+      console.error("[live] OCM refresh failed", err);
+    } finally {
+      setSyncing(false);
+    }
+  };
   useEffect(() => {
     if (!liveLocation) return;
-    void loadStationsNear(liveLocation.lat, liveLocation.lng, 25);
-  }, [liveLocation?.lat, liveLocation?.lng, loadStationsNear]);
+    void refreshLive();
+    const id = window.setInterval(() => void refreshLive(), 60_000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveLocation?.lat, liveLocation?.lng]);
 
   // Nearest stations to the user, used for grey alternate routes.
   const nearest = useMemo(() => {
@@ -203,7 +222,10 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
         </div>
         <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><BatteryCharging className="size-3" /> {stations.length}</span>
-          <span className="flex items-center gap-1"><Clock className="size-3" /> live</span>
+          <span className="flex items-center gap-1">
+            <span className={`size-1.5 rounded-full ${syncing ? "bg-amber-500 animate-pulse" : lastSync ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+            {lastSync ? `live · ${Math.max(0, Math.round((Date.now() - lastSync.getTime()) / 1000))}s` : "live"}
+          </span>
           <span className="flex items-center gap-1"><IndianRupee className="size-3" /> UPI</span>
         </div>
       </div>
@@ -212,6 +234,17 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
       <div className="absolute right-3 top-3 z-[500] flex flex-col gap-2 sm:right-4 sm:top-4">
         <Button size="icon" variant="hero" aria-label="Recenter to my location" className="size-12 rounded-full shadow-glow" onClick={() => { geo.request(); setRecenter((n) => n + 1); }}>
           <LocateFixed className="size-5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="secondary"
+          aria-label="Refresh live station data"
+          title="Refresh live data (Open Charge Map)"
+          className="size-12 rounded-full"
+          onClick={() => { if (!liveRef.current) { geo.request(); return; } void refreshLive(); }}
+          disabled={syncing}
+        >
+          <RefreshCw className={`size-5 ${syncing ? "animate-spin" : ""}`} />
         </Button>
         <Button
           size="icon"
