@@ -10,7 +10,7 @@ import { useEvStore } from "@/store/evStore";
 const publicPaths = ["/login"];
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, guestMode, authReady, loadAuth } = useEvStore();
+  const { authReady, loadAuth } = useEvStore();
   const { pathname } = useLocation();
 
   useEffect(() => { void loadAuth(); }, [loadAuth]);
@@ -19,7 +19,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
   }
 
-  const allowed = isAuthenticated || guestMode || publicPaths.includes(pathname);
-  if (!allowed) return <Navigate to="/login" replace />;
+  // Auth gating is temporarily disabled so every page is freely editable/viewable.
+  // Re-enable by replacing this with: `if (!isAuthenticated && !guestMode && !publicPaths.includes(pathname)) return <Navigate to="/login" replace />;`
+  void publicPaths; void pathname; void Navigate;
   return <>{children}</>;
 }
