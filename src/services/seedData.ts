@@ -1,4 +1,4 @@
-import type { Charger, ChargingSession, QueueEntry, Station, UserProfile, Verification } from "@/types/ev";
+import type { Charger, ChargerType, ChargingSession, QueueEntry, Station, UserProfile, Verification } from "@/types/ev";
 
 export const demoUser: UserProfile = {
   id: "user-demo-001",
@@ -277,7 +277,71 @@ export const stations: Station[] = [
     peak_hours: "6 AM - 10 AM",
     power_kw: 120,
   },
+  ...buildBhopalStations(),
 ];
+
+/**
+ * Generates ~28 charging stations spread across Bhopal neighbourhoods.
+ * Kept as a function so the area list stays editable in one place.
+ */
+function buildBhopalStations(): Station[] {
+  const base: Array<{ name: string; area: string; lat: number; lng: number; op: string; type: ChargerType; kw: number; slots: number; price: number; conns: string[]; amenities: string[] }> = [
+    { name: "ChargeGrid MP Nagar Zone-1", area: "MP Nagar, Bhopal", lat: 23.2330, lng: 77.4347, op: "ChargeGrid", type: "Fast DC", kw: 60, slots: 6, price: 18, conns: ["CCS2", "CHAdeMO"], amenities: ["Cafe", "24x7", "CCTV"] },
+    { name: "Tata Power DB City Mall", area: "DB City Mall, Arera Hills", lat: 23.2389, lng: 77.4302, op: "Tata Power EZ Charge", type: "Fast DC", kw: 90, slots: 8, price: 19, conns: ["CCS2"], amenities: ["Mall", "Food court", "Washroom"] },
+    { name: "Statiq New Market Hub", area: "New Market, TT Nagar", lat: 23.2348, lng: 77.4014, op: "Statiq", type: "DC", kw: 50, slots: 5, price: 20, conns: ["CCS2", "Type 2"], amenities: ["Market", "Parking"] },
+    { name: "Jio-bp Aura Mall", area: "Hoshangabad Road, Bhopal", lat: 23.2034, lng: 77.4675, op: "Jio-bp Pulse", type: "Fast DC", kw: 120, slots: 10, price: 21, conns: ["CCS2", "GB/T"], amenities: ["Mall", "Cafe", "Covered"] },
+    { name: "BHEL Township Charge Point", area: "BHEL, Piplani", lat: 23.2696, lng: 77.5061, op: "BHEL EV", type: "AC", kw: 22, slots: 6, price: 13, conns: ["Type 2", "Bharat AC001"], amenities: ["Township", "Security"] },
+    { name: "Ather Grid Arera Colony", area: "E-7, Arera Colony", lat: 23.2189, lng: 77.4356, op: "Ather Grid", type: "AC", kw: 22, slots: 4, price: 14, conns: ["Type 2"], amenities: ["Cafe", "Covered"] },
+    { name: "Shell Recharge Habibganj", area: "Habibganj, Bhopal", lat: 23.2293, lng: 77.4361, op: "Shell Recharge", type: "Fast DC", kw: 150, slots: 4, price: 24, conns: ["CCS2", "CHAdeMO"], amenities: ["Fuel station", "Air", "CCTV"] },
+    { name: "BluSmart Bittan Market Depot", area: "Bittan Market", lat: 23.2299, lng: 77.4406, op: "BluSmart Charge", type: "Fast DC", kw: 60, slots: 8, price: 17, conns: ["CCS2"], amenities: ["Fleet bay", "24x7"] },
+    { name: "EESL Bhopal Junction", area: "Bhopal Railway Stn", lat: 23.2685, lng: 77.4116, op: "EESL", type: "AC", kw: 15, slots: 6, price: 11, conns: ["Bharat AC001"], amenities: ["Station", "Parking"] },
+    { name: "VoltWay Kolar Dam Road", area: "Kolar Road, Bhopal", lat: 23.1620, lng: 77.4300, op: "VoltWay", type: "DC", kw: 50, slots: 4, price: 19, conns: ["CCS2", "Type 2"], amenities: ["Highway", "Cafe"] },
+    { name: "ChargeZone AIIMS Bhopal", area: "AIIMS, Saket Nagar", lat: 23.2061, lng: 77.4641, op: "ChargeZone", type: "Fast DC", kw: 60, slots: 6, price: 18, conns: ["CCS2"], amenities: ["Hospital", "24x7", "Security"] },
+    { name: "BSES Shahpura Lake View", area: "Shahpura, Bhopal", lat: 23.1926, lng: 77.4404, op: "BSES EV", type: "DC", kw: 30, slots: 4, price: 16, conns: ["CCS2"], amenities: ["Lake side", "Parking"] },
+    { name: "Tata Power Bairagarh", area: "Bairagarh, Bhopal", lat: 23.2828, lng: 77.3324, op: "Tata Power EZ Charge", type: "AC", kw: 22, slots: 4, price: 13, conns: ["Type 2"], amenities: ["Highway", "Parking"] },
+    { name: "Jio-bp Govindpura Industrial", area: "Govindpura, Bhopal", lat: 23.2650, lng: 77.4798, op: "Jio-bp Pulse", type: "Fast DC", kw: 90, slots: 6, price: 20, conns: ["CCS2"], amenities: ["Industrial", "24x7"] },
+    { name: "Statiq Misrod Square", area: "Misrod, Bhopal", lat: 23.1812, lng: 77.4998, op: "Statiq", type: "DC", kw: 60, slots: 4, price: 19, conns: ["CCS2", "Type 2"], amenities: ["Highway", "Food kiosk"] },
+    { name: "ChargeGrid Mandideep MIDC", area: "Mandideep Industrial", lat: 23.1056, lng: 77.5180, op: "ChargeGrid", type: "Fast DC", kw: 120, slots: 8, price: 18, conns: ["CCS2", "GB/T"], amenities: ["Industrial", "Lounge"] },
+    { name: "Ather Grid IT Park Badwai", area: "Bhopal IT Park", lat: 23.2882, lng: 77.4612, op: "Ather Grid", type: "AC", kw: 22, slots: 8, price: 13, conns: ["Type 2"], amenities: ["Office", "WiFi"] },
+    { name: "VoltWay MANIT Campus", area: "MANIT, Bhopal", lat: 23.2148, lng: 77.4071, op: "VoltWay", type: "AC", kw: 22, slots: 4, price: 12, conns: ["Type 2", "Bharat AC001"], amenities: ["Campus"] },
+    { name: "ChargeZone ISBT Hub", area: "ISBT, Habibganj", lat: 23.2253, lng: 77.4423, op: "ChargeZone", type: "Fast DC", kw: 60, slots: 6, price: 18, conns: ["CCS2"], amenities: ["Bus terminal", "24x7"] },
+    { name: "Shell Recharge 10 No. Market", area: "10 No. Market, Bhopal", lat: 23.2310, lng: 77.4108, op: "Shell Recharge", type: "DC", kw: 50, slots: 3, price: 21, conns: ["CCS2"], amenities: ["Market", "Cafe"] },
+    { name: "BluSmart Indrapuri Depot", area: "Indrapuri, BHEL", lat: 23.2604, lng: 77.4934, op: "BluSmart Charge", type: "Fast DC", kw: 60, slots: 6, price: 17, conns: ["CCS2"], amenities: ["Fleet bay"] },
+    { name: "EESL Awadhpuri Square", area: "Awadhpuri, Bhopal", lat: 23.2542, lng: 77.5008, op: "EESL", type: "AC", kw: 15, slots: 4, price: 11, conns: ["Bharat AC001"], amenities: ["Public"] },
+    { name: "Tata Power Karond Square", area: "Karond, Bhopal", lat: 23.3044, lng: 77.3834, op: "Tata Power EZ Charge", type: "DC", kw: 30, slots: 3, price: 16, conns: ["CCS2"], amenities: ["Junction"] },
+    { name: "ChargeGrid Berasia Road", area: "Berasia Road, Bhopal", lat: 23.3199, lng: 77.4012, op: "ChargeGrid", type: "AC", kw: 22, slots: 4, price: 13, conns: ["Type 2"], amenities: ["Highway"] },
+    { name: "Jio-bp Hoshangabad Bypass", area: "Hoshangabad Bypass", lat: 23.1582, lng: 77.4870, op: "Jio-bp Pulse", type: "Fast DC", kw: 120, slots: 6, price: 21, conns: ["CCS2", "CHAdeMO"], amenities: ["Highway", "24x7", "Cafe"] },
+    { name: "Statiq Gandhinagar Plaza", area: "Gandhinagar, Bhopal", lat: 23.2906, lng: 77.4019, op: "Statiq", type: "DC", kw: 50, slots: 4, price: 19, conns: ["CCS2"], amenities: ["Plaza", "Parking"] },
+    { name: "ChargeZone Rajiv Gandhi Bhawan", area: "Bittan Market", lat: 23.2278, lng: 77.4488, op: "ChargeZone", type: "Fast DC", kw: 60, slots: 5, price: 18, conns: ["CCS2"], amenities: ["Govt office"] },
+    { name: "VoltWay Lalghati Square", area: "Lalghati, Bhopal", lat: 23.2731, lng: 77.3784, op: "VoltWay", type: "AC", kw: 22, slots: 4, price: 13, conns: ["Type 2"], amenities: ["Junction", "Parking"] },
+  ];
+  return base.map((b, i) => {
+    const total = b.slots;
+    const avail = (i % 5 === 0) ? 0 : Math.max(1, total - ((i % total) + 1));
+    return {
+      id: `stn-bho-${(i + 1).toString().padStart(3, "0")}`,
+      name: b.name,
+      lat: b.lat,
+      lng: b.lng,
+      address: b.area,
+      city: "Bhopal",
+      operator: b.op,
+      charger_type: b.type,
+      connector_types: b.conns,
+      total_slots: total,
+      available_slots: avail,
+      price_per_kwh: b.price,
+      status: avail === 0 ? "busy" : "open",
+      reliability_score: 78 + ((i * 3) % 20),
+      last_verified: `${5 + ((i * 7) % 55)} min ago`,
+      distance_km: Number((1 + ((i * 1.7) % 18)).toFixed(1)),
+      amenities: b.amenities,
+      wait_minutes: avail === 0 ? 20 + (i % 25) : (i % 12),
+      peak_hours: "6 PM - 10 PM",
+      power_kw: b.kw,
+    } satisfies Station;
+  });
+}
 
 export const chargers: Charger[] = stations.flatMap((station) =>
   Array.from({ length: station.total_slots }, (_, index) => ({

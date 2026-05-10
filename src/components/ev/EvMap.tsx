@@ -17,6 +17,7 @@ function MapFallback() {
 export interface EvMapProps {
   pickMode?: boolean;
   onPickLocation?: (lat: number, lng: number) => void;
+  pickPosition?: { lat: number; lng: number } | null;
 }
 
 export function EvMap(props: EvMapProps) {

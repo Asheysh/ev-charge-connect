@@ -17,7 +17,6 @@ export function TopBar() {
     ["/stations", "Stations", Zap],
     ["/booking", "Queue", Users],
     ["/planner", "Planner", Compass],
-    ["/payment", "Pay", WalletCards],
     ["/rewards", "Rewards", Award],
     ["/admin", "Admin", BarChart3],
     ["/login", "Login", UserRound],
