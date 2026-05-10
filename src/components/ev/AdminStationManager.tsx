@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Crosshair, Flag, IndianRupee, Plus, Power, PowerOff, Trash2, TrendingUp, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Crosshair, Flag, IndianRupee, MapPin, Plus, Power, PowerOff, Trash2, TrendingUp, Wand2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -36,6 +36,8 @@ export function AdminStationManager() {
   const [draft, setDraft] = useState<Omit<Station, "id">>(blankStation);
   const [openId, setOpenId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
 
   useEffect(() => { void loadReports(); }, [loadReports]);
 
@@ -51,6 +53,8 @@ export function AdminStationManager() {
     addStation({ id: crypto.randomUUID(), ...draft });
     setDraft(blankStation());
     setPickMode(false);
+    setWizardOpen(false);
+    setWizardStep(0);
   }
 
   const opened = stations.find((s) => s.id === openId) ?? null;
@@ -80,8 +84,12 @@ export function AdminStationManager() {
           <Button variant={pickMode ? "hero" : "outline"} onClick={() => setPickMode((v) => !v)}>
             <Crosshair className="size-4" /> {pickMode ? "Picking…" : "Drop pin on map"}
           </Button>
+          <Button variant="outline" onClick={() => { setWizardOpen(true); setWizardStep(0); setPickMode(true); }}>
+            <Wand2 className="size-4" /> Step-by-step
+          </Button>
           <Button variant="hero" onClick={commitNew}><Plus className="size-4" /> Add station</Button>
         </div>
+        <p className="text-[11px] text-muted-foreground">Tip: tap “Drop pin on map”, then click anywhere on the map. The pin is also draggable for fine-tuning.</p>
 
         <div className="mt-2">
           <div className="flex items-center justify-between gap-2">
@@ -111,7 +119,87 @@ export function AdminStationManager() {
         </div>
       </div>
 
-      <EvMap pickMode={pickMode} onPickLocation={(lat, lng) => setDraft((d) => ({ ...d, lat, lng }))} />
+      <EvMap
+        pickMode={pickMode}
+        pickPosition={pickMode ? { lat: draft.lat, lng: draft.lng } : null}
+        onPickLocation={(lat, lng) => setDraft((d) => ({ ...d, lat, lng }))}
+      />
+
+      {/* Step-by-step wizard */}
+      <Dialog open={wizardOpen} onOpenChange={(o) => { setWizardOpen(o); if (!o) setPickMode(false); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add station · step {wizardStep + 1} of 4</DialogTitle>
+            <DialogDescription>Quickly set up a new charging station in four guided steps.</DialogDescription>
+          </DialogHeader>
+          <div className="mb-3 flex gap-1">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= wizardStep ? "bg-primary" : "bg-secondary"}`} />
+            ))}
+          </div>
+          {wizardStep === 0 ? (
+            <div className="space-y-3">
+              <p className="flex items-center gap-2 text-sm font-semibold"><MapPin className="size-4 text-primary" /> Drop or drag the pin on the map (it stays draggable).</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="number" step="0.0001" value={draft.lat} onChange={(e) => setDraft({ ...draft, lat: Number(e.target.value) })} placeholder="Latitude" />
+                <Input type="number" step="0.0001" value={draft.lng} onChange={(e) => setDraft({ ...draft, lng: Number(e.target.value) })} placeholder="Longitude" />
+              </div>
+              <Input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} placeholder="Street address" />
+              <Input value={draft.city} onChange={(e) => setDraft({ ...draft, city: e.target.value })} placeholder="City" />
+            </div>
+          ) : null}
+          {wizardStep === 1 ? (
+            <div className="space-y-3">
+              <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Station name" />
+              <Input value={draft.operator ?? ""} onChange={(e) => setDraft({ ...draft, operator: e.target.value })} placeholder="Operator" />
+              <select className="h-10 w-full rounded-xl border border-input bg-card/70 px-3 text-sm" value={draft.charger_type} onChange={(e) => setDraft({ ...draft, charger_type: e.target.value as Station["charger_type"] })}>
+                <option value="AC">AC</option>
+                <option value="DC">DC</option>
+                <option value="Fast DC">Fast DC</option>
+              </select>
+              <Input value={draft.connector_types.join(", ")} onChange={(e) => setDraft({ ...draft, connector_types: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })} placeholder="Connectors (comma separated)" />
+            </div>
+          ) : null}
+          {wizardStep === 2 ? (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-xs">Total slots
+                <Input type="number" value={draft.total_slots} onChange={(e) => setDraft({ ...draft, total_slots: Number(e.target.value), available_slots: Number(e.target.value) })} />
+              </label>
+              <label className="text-xs">Power (kW)
+                <Input type="number" value={draft.power_kw ?? 0} onChange={(e) => setDraft({ ...draft, power_kw: Number(e.target.value) })} />
+              </label>
+              <label className="text-xs">Price ₹/kWh
+                <Input type="number" value={draft.price_per_kwh} onChange={(e) => setDraft({ ...draft, price_per_kwh: Number(e.target.value) })} />
+              </label>
+              <label className="text-xs">Reliability %
+                <Input type="number" value={draft.reliability_score} onChange={(e) => setDraft({ ...draft, reliability_score: Number(e.target.value) })} />
+              </label>
+            </div>
+          ) : null}
+          {wizardStep === 3 ? (
+            <div className="space-y-2 text-sm">
+              <p className="font-semibold">Review &amp; confirm</p>
+              <div className="rounded-xl bg-secondary p-3">
+                <p><b>{draft.name}</b> · {draft.operator}</p>
+                <p className="text-xs text-muted-foreground">{draft.address}, {draft.city}</p>
+                <p className="text-xs text-muted-foreground">{draft.lat.toFixed(4)}, {draft.lng.toFixed(4)}</p>
+                <p className="mt-1 text-xs">{draft.charger_type} · {draft.power_kw} kW · {draft.total_slots} slots · ₹{draft.price_per_kwh}/kWh</p>
+                <p className="text-xs text-muted-foreground">Connectors: {draft.connector_types.join(", ")}</p>
+              </div>
+            </div>
+          ) : null}
+          <div className="mt-4 flex justify-between">
+            <Button variant="ghost" disabled={wizardStep === 0} onClick={() => setWizardStep((s) => Math.max(0, s - 1))}>
+              <ArrowLeft className="size-4" /> Back
+            </Button>
+            {wizardStep < 3 ? (
+              <Button variant="hero" onClick={() => setWizardStep((s) => s + 1)}>Next <ArrowRight className="size-4" /></Button>
+            ) : (
+              <Button variant="hero" onClick={commitNew}><Check className="size-4" /> Create station</Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!opened} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent className="max-w-2xl">
