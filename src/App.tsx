@@ -1,5 +1,6 @@
 import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { AdminPanel, AuthPanel, FilterPanel, PageFrame, PaymentPanel, RecommendationRail, RewardsPanel, StationsDirectory } from "@/components/ev/ControlPanels";
+import { WelcomeDashboard } from "@/components/ev/WelcomeDashboard";
 import { EvMap } from "@/components/ev/EvMap";
 import { StationPanel } from "@/components/ev/StationPanel";
 import { VehiclePanel } from "@/components/ev/VehiclePanel";
@@ -12,6 +13,7 @@ const routerBaseName = import.meta.env.BASE_URL === "./" ? "/" : import.meta.env
 function HomePage() {
   return (
     <PageFrame>
+      <WelcomeDashboard />
       <FilterPanel />
       <RecommendationRail />
       <div className="grid gap-5 xl:grid-cols-[1.45fr_0.85fr]">
