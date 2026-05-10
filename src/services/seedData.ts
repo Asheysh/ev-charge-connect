@@ -1,4 +1,4 @@
-import type { Charger, ChargingSession, QueueEntry, Station, UserProfile, Verification } from "@/types/ev";
+import type { Charger, ChargerType, ChargingSession, QueueEntry, Station, UserProfile, Verification } from "@/types/ev";
 
 export const demoUser: UserProfile = {
   id: "user-demo-001",
