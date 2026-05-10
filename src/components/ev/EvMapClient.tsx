@@ -2,8 +2,8 @@ import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents 
 import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation, RefreshCw, Zap } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { BatteryCharging, Clock, Crosshair, IndianRupee, LocateFixed, MapPin, Navigation, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useEvStore } from "@/store/evStore";
 import { useFilteredStations } from "@/hooks/useFilteredStations";
 import type { Station } from "@/types/ev";
@@ -41,21 +41,12 @@ function MapClickCapture({ onPick }: { onPick: (lat: number, lng: number) => voi
   return null;
 }
 
-/**
- * Imperative recenter helper. IMPORTANT: only fly when `trigger` changes
- * (i.e. user pressed the recenter button). Listening on `position` would
- * re-fly the map every time the geolocation watcher emits a new fix, which
- * makes selecting a station / clicking on the map snap back to the user.
- */
-function FlyController({ trigger, getPosition }: { trigger: number; getPosition: () => [number, number] | null }) {
+/** Imperative recenter helper exposed via a hook component. */
+function FlyController({ trigger, position }: { trigger: number; position: [number, number] | null }) {
   const map = useMap();
   useEffect(() => {
-    if (trigger <= 0) return;
-    const p = getPosition();
-    if (p) map.flyTo(p, Math.max(map.getZoom(), 14), { duration: 0.7 });
-    // intentionally exclude getPosition / map from deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger]);
+    if (trigger > 0 && position) map.flyTo(position, Math.max(map.getZoom(), 14), { duration: 0.7 });
+  }, [trigger, position, map]);
   return null;
 }
 
@@ -82,39 +73,10 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [nearbyRoutes, setNearbyRoutes] = useState<{ stationId: string; route: RouteResult }[]>([]);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [syncing, setSyncing] = useState(false);
-  const liveRef = useRef<LatLng | null>(null);
-  liveRef.current = liveLocation;
 
   useEffect(() => {
     if (geo.coords) setLiveLocation(geo.coords);
   }, [geo.coords, setLiveLocation]);
-
-  // Pull live charging stations from Open Charge Map whenever the user's
-  // location changes meaningfully (or first becomes known) and refresh on
-  // an interval so availability stays current. See DOCS.md › Live Data.
-  const loadStationsNear = useEvStore((s) => s.loadStationsNear);
-  const refreshLive = async () => {
-    const pos = liveRef.current;
-    if (!pos) return;
-    setSyncing(true);
-    try {
-      await loadStationsNear(pos.lat, pos.lng, 25);
-      setLastSync(new Date());
-    } catch (err) {
-      console.error("[live] OCM refresh failed", err);
-    } finally {
-      setSyncing(false);
-    }
-  };
-  useEffect(() => {
-    if (!liveLocation) return;
-    void refreshLive();
-    const id = window.setInterval(() => void refreshLive(), 60_000);
-    return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveLocation?.lat, liveLocation?.lng]);
 
   // Nearest stations to the user, used for grey alternate routes.
   const nearest = useMemo(() => {
@@ -167,7 +129,7 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
         {pickMode && onPickLocation ? <MapClickCapture onPick={onPickLocation} /> : null}
 
         {/* Imperative recenter (manual button only — no auto-fly on geo updates) */}
-        <FlyController trigger={recenter} getPosition={() => (liveRef.current ? [liveRef.current.lat, liveRef.current.lng] : null)} />
+        <FlyController trigger={recenter} position={liveLocation ? [liveLocation.lat, liveLocation.lng] : null} />
 
         {liveLocation ? (
           <Marker position={[liveLocation.lat, liveLocation.lng]} icon={liveIcon}>
@@ -222,10 +184,7 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
         </div>
         <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><BatteryCharging className="size-3" /> {stations.length}</span>
-          <span className="flex items-center gap-1">
-            <span className={`size-1.5 rounded-full ${syncing ? "bg-amber-500 animate-pulse" : lastSync ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
-            {lastSync ? `live · ${Math.max(0, Math.round((Date.now() - lastSync.getTime()) / 1000))}s` : "live"}
-          </span>
+          <span className="flex items-center gap-1"><Clock className="size-3" /> live</span>
           <span className="flex items-center gap-1"><IndianRupee className="size-3" /> UPI</span>
         </div>
       </div>
@@ -235,28 +194,7 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
         <Button size="icon" variant="hero" aria-label="Recenter to my location" className="size-12 rounded-full shadow-glow" onClick={() => { geo.request(); setRecenter((n) => n + 1); }}>
           <LocateFixed className="size-5" />
         </Button>
-        <Button
-          size="icon"
-          variant="secondary"
-          aria-label="Refresh live station data"
-          title="Refresh live data (Open Charge Map)"
-          className="size-12 rounded-full"
-          onClick={() => { if (!liveRef.current) { geo.request(); return; } void refreshLive(); }}
-          disabled={syncing}
-        >
-          <RefreshCw className={`size-5 ${syncing ? "animate-spin" : ""}`} />
-        </Button>
-        <Button
-          size="icon"
-          variant="secondary"
-          aria-label="Show ChargeGrid routes to nearest stations"
-          title="ChargeGrid: route to nearest stations"
-          className="size-12 rounded-full"
-          onClick={() => {
-            if (!liveLocation) { geo.request(); return; }
-            void showChargegridRoutes();
-          }}
-        >
+        <Button size="icon" variant="secondary" aria-label="Show ChargeGrid routes" className="size-12 rounded-full" onClick={() => void showChargegridRoutes()} disabled={!liveLocation}>
           <Zap className="size-5" />
         </Button>
         {liveLocation && selected ? (

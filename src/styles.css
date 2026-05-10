@@ -231,15 +231,6 @@
     font-family: var(--font-sans);
   }
 
-  /* Radix Dialog must sit above Leaflet panes (which can reach z-index ~700)
-   * and our floating action buttons (z-500). */
-  [data-radix-popper-content-wrapper],
-  [data-state="open"][role="dialog"],
-  [data-radix-dialog-overlay],
-  [data-radix-dialog-content] {
-    z-index: 2000 !important;
-  }
-
   .leaflet-popup-content-wrapper,
   .leaflet-popup-tip {
     background: var(--card);

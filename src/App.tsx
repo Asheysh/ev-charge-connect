@@ -6,10 +6,6 @@ import { VehiclePanel } from "@/components/ev/VehiclePanel";
 import { TravelPlanner } from "@/components/ev/TravelPlanner";
 import { AdminStationManager } from "@/components/ev/AdminStationManager";
 import { SuperAdminPanel } from "@/components/ev/SuperAdminPanel";
-import { OfflineDevicePanel } from "@/components/ev/OfflineDevicePanel";
-import { MainAdminConsole } from "@/components/ev/MainAdminConsole";
-import { AuthGate } from "@/components/ev/AuthGate";
-import { useEvStore } from "@/store/evStore";
 
 const routerBaseName = import.meta.env.BASE_URL === "./" ? "/" : import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -50,22 +46,6 @@ function BookingPage() {
   );
 }
 
-function AdminRoute() {
-  const { isAdmin, isSuperAdmin } = useEvStore();
-  if (!isAdmin && !isSuperAdmin) return <Navigate to="/" replace />;
-  return (
-    <PageFrame>
-      <div className="grid gap-5">
-        {isSuperAdmin ? <MainAdminConsole /> : null}
-        <AdminPanel />
-        <AdminStationManager />
-        <OfflineDevicePanel />
-        {isSuperAdmin ? <SuperAdminPanel /> : null}
-      </div>
-    </PageFrame>
-  );
-}
-
 function NotFoundPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-background px-4 text-foreground">
@@ -84,20 +64,18 @@ function NotFoundPage() {
 export default function App() {
   return (
     <BrowserRouter basename={routerBaseName}>
-      <AuthGate>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/stations" element={<StationsPage />} />
-          <Route path="/booking" element={<BookingPage />} />
-          <Route path="/payment" element={<PageFrame><PaymentPanel /></PageFrame>} />
-          <Route path="/payments" element={<Navigate to="/payment" replace />} />
-          <Route path="/rewards" element={<PageFrame><RewardsPanel /></PageFrame>} />
-          <Route path="/planner" element={<PageFrame><TravelPlanner /></PageFrame>} />
-          <Route path="/admin" element={<AdminRoute />} />
-          <Route path="/login" element={<PageFrame><AuthPanel /></PageFrame>} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </AuthGate>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/stations" element={<StationsPage />} />
+        <Route path="/booking" element={<BookingPage />} />
+        <Route path="/payment" element={<PageFrame><PaymentPanel /></PageFrame>} />
+        <Route path="/payments" element={<Navigate to="/payment" replace />} />
+        <Route path="/rewards" element={<PageFrame><RewardsPanel /></PageFrame>} />
+        <Route path="/planner" element={<PageFrame><TravelPlanner /></PageFrame>} />
+        <Route path="/admin" element={<PageFrame><div className="grid gap-5"><AdminPanel /><AdminStationManager /><SuperAdminPanel /></div></PageFrame>} />
+        <Route path="/login" element={<PageFrame><AuthPanel /></PageFrame>} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </BrowserRouter>
   );
 }

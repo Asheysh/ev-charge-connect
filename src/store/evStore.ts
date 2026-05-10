@@ -2,11 +2,9 @@ import { create } from "zustand";
 import type { AppRole, QueueEntry, Station, StationFilters, StationReport, Transaction, UserProfile, UserRoleEntry, Verification } from "@/types/ev";
 import { demoUser, stations as seedStations } from "@/services/seedData";
 import { createUpiTransaction, fetchAllRoles, fetchQueue, fetchStationReports, fetchStations, joinStationQueue, patchStation, setStationActive, setUserRole, submitStationReport, submitVerification } from "@/services/evApi";
-import { fetchOpenChargeMapStations } from "@/services/openChargeMap";
 import { getCurrentAuth, signInWithEmail, signInWithGoogle, signOutUser, signUpWithEmail } from "@/services/authApi";
 import type { LatLng, RouteResult } from "@/lib/geo";
 import { isSupabaseConfigured, supabase } from "@/services/supabaseClient";
-import { roleFromEmail } from "@/lib/roles";
 
 export const guestUser: UserProfile = {
   ...demoUser,
@@ -23,10 +21,6 @@ interface EvState {
   isAuthenticated: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  /** True when the visitor explicitly chose "Continue as guest". */
-  guestMode: boolean;
-  enterGuestMode: () => void;
-  exitGuestMode: () => void;
   stations: Station[];
   selectedStationId: string;
   filters: StationFilters;
@@ -57,7 +51,6 @@ interface EvState {
   setFilters: (filters: Partial<StationFilters>) => void;
   setBatteryPercent: (value: number) => void;
   loadStations: () => Promise<void>;
-  loadStationsNear: (lat: number, lng: number, distanceKm?: number) => Promise<void>;
   refreshQueue: (stationId: string) => Promise<void>;
   joinQueue: (stationId: string) => Promise<void>;
   checkIn: (stationId: string) => void;
@@ -82,9 +75,6 @@ export const useEvStore = create<EvState>((set, get) => ({
   isAuthenticated: false,
   isAdmin: false,
   isSuperAdmin: false,
-  guestMode: false,
-  enterGuestMode: () => set({ guestMode: true, user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false }),
-  exitGuestMode: () => set({ guestMode: false }),
   stations: seedStations,
   selectedStationId: seedStations[0].id,
   filters: defaultFilters,
@@ -141,16 +131,11 @@ export const useEvStore = create<EvState>((set, get) => ({
         isSuperAdmin = roles.includes("super_admin");
         isAdmin = isSuperAdmin || roles.includes("admin");
       }
-      // Fallback: email-based role inference for the seeded demo accounts.
-      const inferred = roleFromEmail(auth.user?.email ?? null);
-      if (inferred === "super_admin") { isSuperAdmin = true; isAdmin = true; }
-      else if (inferred === "admin") { isAdmin = true; }
       set({
         user: isAuthenticated ? auth.profile : guestUser,
         isAuthenticated,
         isAdmin,
         isSuperAdmin,
-        guestMode: false,
         authReady: true,
         authError: "",
       });
@@ -174,7 +159,7 @@ export const useEvStore = create<EvState>((set, get) => ({
   },
   logout: async () => {
     await signOutUser();
-    set({ user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false, guestMode: false });
+    set({ user: guestUser, isAuthenticated: false, isAdmin: false, isSuperAdmin: false });
   },
   loadStations: async () => {
     try {
@@ -185,20 +170,6 @@ export const useEvStore = create<EvState>((set, get) => ({
       set({ stations: safeStations, selectedStationId });
     } catch (error) {
       set({ stations: seedStations, selectedStationId: seedStations[0].id });
-    }
-  },
-  loadStationsNear: async (lat, lng, distanceKm = 25) => {
-    try {
-      const live = await fetchOpenChargeMapStations({ lat, lng, distanceKm, maxResults: 60 });
-      // Merge with anything loaded from Supabase / seeds, deduped by id.
-      const existing = get().stations;
-      const seen = new Set(live.map((s) => s.id));
-      const merged = [...live, ...existing.filter((s) => !seen.has(s.id))];
-      const currentSelection = get().selectedStationId;
-      const selectedStationId = merged.some((s) => s.id === currentSelection) ? currentSelection : merged[0]?.id ?? currentSelection;
-      set({ stations: merged, selectedStationId });
-    } catch (e) {
-      console.warn("[ocm] failed to load nearby stations", e);
     }
   },
   setSelectedStation: (stationId) => set({ selectedStationId: stationId }),
