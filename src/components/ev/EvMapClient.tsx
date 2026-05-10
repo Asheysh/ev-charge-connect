@@ -53,9 +53,17 @@ function FlyController({ trigger, position }: { trigger: number; position: [numb
 interface EvMapClientProps {
   pickMode?: boolean;
   onPickLocation?: (lat: number, lng: number) => void;
+  pickPosition?: { lat: number; lng: number } | null;
 }
 
-export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapClientProps) {
+const pickIcon = new L.DivIcon({
+  html: '<div style="width:22px;height:22px;border-radius:9999px;background:oklch(0.65 0.2 162);border:3px solid white;box-shadow:0 0 0 6px oklch(0.65 0.2 162/0.25)"></div>',
+  className: "ev-pick-marker",
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+});
+
+export default function EvMapClient({ pickMode = false, onPickLocation, pickPosition = null }: EvMapClientProps) {
   const filtered = useFilteredStations();
   const allStations = useEvStore((s) => s.stations);
   const selectedStationId = useEvStore((state) => state.selectedStationId);
@@ -127,6 +135,23 @@ export default function EvMapClient({ pickMode = false, onPickLocation }: EvMapC
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {pickMode && onPickLocation ? <MapClickCapture onPick={onPickLocation} /> : null}
+
+        {/* Draggable draft marker (admin add-station flow) */}
+        {pickMode && pickPosition && onPickLocation ? (
+          <Marker
+            position={[pickPosition.lat, pickPosition.lng]}
+            icon={pickIcon}
+            draggable
+            eventHandlers={{
+              dragend: (e) => {
+                const ll = (e.target as L.Marker).getLatLng();
+                onPickLocation(ll.lat, ll.lng);
+              },
+            }}
+          >
+            <Popup>Drag to position the new station</Popup>
+          </Marker>
+        ) : null}
 
         {/* Imperative recenter (manual button only — no auto-fly on geo updates) */}
         <FlyController trigger={recenter} position={liveLocation ? [liveLocation.lat, liveLocation.lng] : null} />
