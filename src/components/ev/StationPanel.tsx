@@ -1,9 +1,22 @@
-import { Battery, CheckCircle2, Clock3, IndianRupee, ShieldCheck, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { useEvStore } from "@/store/evStore";
+import React from "react";
 
+import {
+  Battery,
+  CheckCircle2,
+  Clock3,
+  IndianRupee,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
+
+import { useNavigate } from "react-router-dom";
+
+import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
+
+import { useEvStore } from "../../store/evStore";
 export function StationPanel() {
+  const navigate = useNavigate();
   const { stations, selectedStationId, queues, user, joinQueue, checkIn, startCharging, verifyStation } = useEvStore();
   const station = stations.find((item) => item.id === selectedStationId) ?? stations[0];
   if (!station) {
@@ -61,9 +74,23 @@ export function StationPanel() {
           <Button variant="outline" onClick={() => checkIn(station.id)} disabled={!userQueue}>
             QR check-in
           </Button>
-          <Button variant="secondary" onClick={() => startCharging(station.id)} disabled={!userQueue || userQueue.status === "charging"}>
-            Start charging
-          </Button>
+          <Button
+  variant="secondary"
+  disabled={!userQueue || userQueue.status === "charging"}
+  onClick={() => {
+    startCharging(station.id);
+
+    navigate("/payment", {
+      state: {
+        station: station.name,
+        charger: station.chargerType || "Fast DC Charger",
+        amount: 250,
+      },
+    });
+  }}
+>
+  Start charging
+</Button>
           <Button variant="success" onClick={() => void verifyStation(station.id, "working", "excellent")}>
             Verify +75 coins
           </Button>
